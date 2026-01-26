@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Link as RouterLink } from 'react-router-dom';
+import { Link as RouterLink, useNavigate } from 'react-router-dom';
 import {
     Box,
     Button,
@@ -8,10 +8,6 @@ import {
     InputAdornment,
     Stack,
     IconButton,
-    Dialog,
-    DialogContent,
-    DialogTitle,
-    DialogActions,
     Alert
 } from '@mui/material';
 import {
@@ -21,7 +17,6 @@ import {
     ArrowRight01Icon,
     ViewIcon,
     ViewOffIcon,
-    MailValidation01Icon
 } from 'hugeicons-react';
 import AuthLayout from './components/AuthLayout';
 import { supabase } from '../../lib/supabase';
@@ -55,10 +50,10 @@ const glassInputSx = {
 };
 
 const SignupPage = () => {
+    const navigate = useNavigate();
     const [showPassword, setShowPassword] = useState(false);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
-    const [showVerifyDialog, setShowVerifyDialog] = useState(false);
 
     // Form State
     const [fullName, setFullName] = useState('');
@@ -85,8 +80,9 @@ const SignupPage = () => {
 
             if (signUpError) throw signUpError;
 
-            // Show verification dialog on success
-            setShowVerifyDialog(true);
+            // Email confirmation is disabled, so user is signed in.
+            // Redirect to home/dashboard
+            navigate('/');
         } catch (err: any) {
             setError(err.message);
         } finally {
@@ -223,39 +219,6 @@ const SignupPage = () => {
                     </Typography>
                 </Box>
             </Stack>
-
-            {/* Verification Dialog */}
-            <Dialog
-                open={showVerifyDialog}
-                maxWidth="xs"
-                fullWidth
-                PaperProps={{
-                    sx: { borderRadius: 4, p: 2, textAlign: 'center' }
-                }}
-            >
-                <DialogTitle sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2 }}>
-                    <Box sx={{ p: 2, bgcolor: 'primary.light', color: 'primary.main', borderRadius: '50%', bgOpacity: 0.1 }}>
-                        <MailValidation01Icon size={48} />
-                    </Box>
-                    <Typography variant="h5" fontWeight="bold">Check your email</Typography>
-                </DialogTitle>
-                <DialogContent>
-                    <Typography color="text.secondary">
-                        We've sent a verification link to <b>{email}</b>.
-                        <br />
-                        Please verify your email address to log in.
-                    </Typography>
-                </DialogContent>
-                <DialogActions sx={{ justifyContent: 'center', pb: 3 }}>
-                    <Button
-                        variant="contained"
-                        onClick={() => window.location.href = '/login'}
-                        sx={{ borderRadius: 20, px: 4 }}
-                    >
-                        Go to Login
-                    </Button>
-                </DialogActions>
-            </Dialog>
         </AuthLayout>
     );
 };
