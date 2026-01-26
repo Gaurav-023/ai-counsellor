@@ -9,7 +9,7 @@ import {
     alpha,
     useTheme
 } from '@mui/material';
-import { ArrowForward } from '@mui/icons-material';
+import { ArrowRight01Icon } from 'hugeicons-react';
 import { motion, type Variants } from 'framer-motion';
 
 // Animation variants
@@ -44,7 +44,8 @@ const HeroSection = () => {
                 alignItems: 'center',
                 minHeight: '100vh',
                 pt: 10,
-                background: `radial-gradient(circle at 50% 30%, ${alpha(theme.palette.primary.main, 0.1)} 0%, ${theme.palette.background.default} 60%)`,
+                // Soft gradient blending with the new warm background
+                background: `linear-gradient(180deg, ${alpha(theme.palette.background.default, 1)} 0%, ${alpha(theme.palette.primary.main, 0.03)} 100%)`,
             }}
         >
             <Container maxWidth="lg">
@@ -85,10 +86,29 @@ const HeroSection = () => {
                             </motion.div>
 
                             <motion.div variants={fadeInUp}>
-                                <Typography variant="h1" gutterBottom sx={{ fontSize: { xs: '2.5rem', md: '4.5rem' }, lineHeight: 1.1, mb: 3, color: 'text.primary' }}>
+                                <Typography variant="h1" gutterBottom sx={{
+                                    fontSize: { xs: '2.5rem', md: '4.5rem' },
+                                    lineHeight: 1.1,
+                                    mb: 3,
+                                    color: 'text.primary',
+                                    fontFamily: '"Inter", sans-serif',
+                                    fontWeight: 800
+                                }}>
                                     Plan your study-abroad <br />
-                                    <Box component="span" sx={{ color: 'transparent', backgroundClip: 'text', backgroundImage: `linear-gradient(to right, ${theme.palette.primary.main}, ${theme.palette.secondary.main})` }}>
-                                        journey with AI.
+                                    <Box
+                                        component={motion.span}
+                                        sx={{
+                                            fontFamily: '"Cormorant Garamond", serif',
+                                            fontStyle: 'italic',
+                                            color: 'transparent',
+                                            backgroundClip: 'text',
+                                            backgroundImage: `linear-gradient(to right, ${theme.palette.primary.main}, ${theme.palette.secondary.main}, ${theme.palette.primary.main})`,
+                                            backgroundSize: '200% auto',
+                                        }}
+                                        animate={{ backgroundPosition: ["0% 50%", "100% 50%"] }}
+                                        transition={{ duration: 4, repeat: Infinity, ease: "linear" }}
+                                    >
+                                        Journey with AI.
                                     </Box>
                                 </Typography>
                             </motion.div>
@@ -105,7 +125,7 @@ const HeroSection = () => {
                                     <Button
                                         variant="contained"
                                         size="large"
-                                        endIcon={<ArrowForward />}
+                                        endIcon={<ArrowRight01Icon />}
                                         component={RouterLink}
                                         to="/signup"
                                         sx={{ fontSize: '1.1rem', py: 1.5, px: 4 }}

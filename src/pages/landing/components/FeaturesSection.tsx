@@ -38,7 +38,7 @@ const FeaturesSection = () => {
                 <motion.div
                     initial="hidden"
                     whileInView="visible"
-                    viewport={{ once: true, margin: "-100px" }}
+                    viewport={{ once: false, margin: "-100px", amount: 0.3 }}
                     variants={fadeInUp}
                 >
                     <Typography variant="h3" align="center" fontWeight="bold" gutterBottom color="text.primary">
@@ -55,7 +55,7 @@ const FeaturesSection = () => {
                             <motion.div
                                 initial="hidden"
                                 whileInView="visible"
-                                viewport={{ once: true }}
+                                viewport={{ once: false, amount: 0.3 }}
                                 variants={fadeInUp}
                                 style={{ height: '100%' }}
                             >

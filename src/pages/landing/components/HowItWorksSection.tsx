@@ -13,17 +13,16 @@ import {
     Search01Icon,
     AiBrain03Icon,
     CheckmarkCircle02Icon,
-    ArrowDown01Icon
 } from 'hugeicons-react';
-import { motion, useScroll, useTransform, type Variants } from 'framer-motion';
-import { useRef } from 'react';
+import { motion, type Variants } from 'framer-motion';
+
 
 const cardVariants: Variants = {
-    hidden: { opacity: 0, x: 50 },
+    hidden: { opacity: 0, y: 200 },
     visible: {
         opacity: 1,
-        x: 0,
-        transition: { duration: 0.6, ease: "easeOut" }
+        y: 0,
+        transition: { duration: 0.8, ease: "easeOut" }
     }
 };
 
@@ -76,7 +75,7 @@ const HowItWorksSection = () => {
                 <motion.div
                     initial={{ opacity: 0, y: 30 }}
                     whileInView={{ opacity: 1, y: 0 }}
-                    viewport={{ once: true }}
+                    viewport={{ once: false }}
                     transition={{ duration: 0.6 }}
                 >
                     <Typography variant="h3" align="center" fontWeight="bold" gutterBottom color="text.primary">
@@ -110,7 +109,7 @@ const HowItWorksSection = () => {
                                         variants={lineVariants}
                                         initial="hidden"
                                         whileInView="visible"
-                                        viewport={{ once: true, margin: "-100px" }}
+                                        viewport={{ once: false }}
                                         style={{
                                             width: '100%',
                                             background: `linear-gradient(to bottom, ${theme.palette.primary.main}, ${theme.palette.secondary.main})`,
@@ -126,7 +125,7 @@ const HowItWorksSection = () => {
                                     variants={iconVariants}
                                     initial="hidden"
                                     whileInView="visible"
-                                    viewport={{ once: true, margin: "-50px" }}
+                                    viewport={{ once: false }}
                                 >
                                     <Box
                                         sx={{
@@ -142,7 +141,7 @@ const HowItWorksSection = () => {
                                             color: 'primary.main'
                                         }}
                                     >
-                                        <step.icon size={28} variant="Solid" />
+                                        <step.icon size={28} />
                                     </Box>
                                 </motion.div>
                             </Box>
@@ -152,7 +151,7 @@ const HowItWorksSection = () => {
                                 variants={cardVariants}
                                 initial="hidden"
                                 whileInView="visible"
-                                viewport={{ once: true, margin: "-100px" }}
+                                viewport={{ once: false, amount: 0.3 }}
                                 style={{ flex: 1 }}
                             >
                                 <Paper
@@ -201,10 +200,9 @@ const HowItWorksSection = () => {
                         <motion.div
                             initial={{ opacity: 0, y: -20 }}
                             whileInView={{ opacity: 1, y: 0 }}
-                            viewport={{ once: true }}
+                            viewport={{ once: false }}
                             transition={{ delay: 1 }}
                         >
-                            <ArrowDown01Icon size={24} color={theme.palette.primary.main} />
                         </motion.div>
                     </Box>
 
@@ -214,7 +212,7 @@ const HowItWorksSection = () => {
                     <motion.div
                         initial={{ opacity: 0, scale: 0.9 }}
                         whileInView={{ opacity: 1, scale: 1 }}
-                        viewport={{ once: true }}
+                        viewport={{ once: false }}
                     >
                         <Button
                             variant="outlined"

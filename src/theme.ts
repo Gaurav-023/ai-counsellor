@@ -16,8 +16,8 @@ let theme = createTheme({
             contrastText: '#ffffff',
         },
         background: {
-            default: '#ffffff',
-            paper: '#f8fafc', // Slate 50
+            default: '#FDFBF7', // Warm Off-White / Cream
+            paper: '#ffffff', // Pure white for cards/papers to pop against cream bg
         },
         text: {
             primary: '#0f172a', // Slate 900
