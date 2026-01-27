@@ -67,15 +67,30 @@ const LoginPage = () => {
         setError(null);
 
         try {
-            const { error: signInError } = await supabase.auth.signInWithPassword({
+            const { data: { user }, error: signInError } = await supabase.auth.signInWithPassword({
                 email,
                 password,
             });
 
             if (signInError) throw signInError;
 
-            // Login successful
-            navigate('/');
+            if (user) {
+                // Check if user has completed onboarding
+                const { data: profile } = await supabase
+                    .from('profiles')
+                    .select('is_onboarding_complete')
+                    .eq('id', user.id)
+                    .single();
+
+                if (profile?.is_onboarding_complete) {
+                    navigate('/'); // Go to dashboard/home if complete
+                } else {
+                    navigate('/onboarding'); // Go to onboarding if incomplete
+                }
+            } else {
+                navigate('/');
+            }
+
         } catch (err: any) {
             setError(err.message === "Invalid login credentials"
                 ? "Incorrect email or password."

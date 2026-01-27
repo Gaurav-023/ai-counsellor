@@ -45,3 +45,59 @@ create policy "Avatar images are publicly accessible." on storage.objects
 
 create policy "Anyone can upload an avatar." on storage.objects
   for insert with check (bucket_id = 'avatars');
+
+-- Drop table safely if it already exists
+DROP TABLE IF EXISTS student_profiles;
+
+-- Add onboarding status to profiles table
+ALTER TABLE profiles
+ADD COLUMN IF NOT EXISTS is_onboarding_complete BOOLEAN DEFAULT false;
+
+-- Create table for detailed student profiles (Onboarding Data)
+CREATE TABLE student_profiles (
+  id UUID REFERENCES auth.users(id) ON DELETE CASCADE PRIMARY KEY,
+  updated_at TIMESTAMPTZ DEFAULT now(),
+
+  -- Academic Background
+  education_level TEXT,
+  degree_major TEXT,
+  graduation_year INT,
+  gpa TEXT,
+
+  -- Study Goals
+  intended_degree TEXT,
+  field_of_study TEXT,
+  preferred_countries TEXT[], -- Array of strings
+  target_intake_year INT,
+
+  -- Budget & Funding
+  budget_range TEXT,
+  funding_source TEXT,
+
+  -- Readiness
+  exam_ielts_status TEXT,
+  exam_ielts_score TEXT,
+  exam_gre_status TEXT,
+  exam_gre_score TEXT,
+  sop_status TEXT
+);
+
+-- Enable Row Level Security
+ALTER TABLE student_profiles ENABLE ROW LEVEL SECURITY;
+
+-- Policies
+CREATE POLICY "Users can view own student profile"
+ON student_profiles
+FOR SELECT
+USING (auth.uid() = id);
+
+CREATE POLICY "Users can insert own student profile"
+ON student_profiles
+FOR INSERT
+WITH CHECK (auth.uid() = id);
+
+CREATE POLICY "Users can update own student profile"
+ON student_profiles
+FOR UPDATE
+USING (auth.uid() = id)
+WITH CHECK (auth.uid() = id);

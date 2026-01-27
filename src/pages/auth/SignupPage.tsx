@@ -68,7 +68,7 @@ const SignupPage = () => {
         setError(null);
 
         try {
-            const { error: signUpError } = await supabase.auth.signUp({
+            const { data, error: signUpError } = await supabase.auth.signUp({
                 email,
                 password,
                 options: {
@@ -80,9 +80,18 @@ const SignupPage = () => {
 
             if (signUpError) throw signUpError;
 
-            // Email confirmation is disabled, so user is signed in.
-            // Redirect to home/dashboard
-            navigate('/');
+            // For new signups, it's safe to assume onboarding is NOT complete.
+            // However, Supabase might require email confirmation unless disabled.
+            // If session exists, user is logged in.
+            if (data.session) {
+                navigate('/onboarding');
+            } else {
+                // If email confirmation is enabled and required (which user said is disabled, but just in case)
+                setError("Please check your email for confirmation link if required.");
+                // Or navigate to a 'check email' page.
+                // Given user instruction "immediate redirect", assuming session is active.
+                navigate('/onboarding');
+            }
         } catch (err: any) {
             setError(err.message);
         } finally {
