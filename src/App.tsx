@@ -7,15 +7,32 @@ import SignupPage from './pages/auth/SignupPage';
 import OnboardingPage from './pages/onboarding/OnboardingPage';
 import './App.css';
 
+import ProtectedRoute from './components/ProtectedRoute';
+import DashboardPage from './pages/dashboard/DashboardPage';
+import DashboardLayout from './layouts/DashboardLayout';
+import UniversitiesPage from './pages/universities/UniversitiesPage';
+
 function App() {
   return (
     <ThemeProvider theme={theme}>
       <CssBaseline />
       <Router>
         <Routes>
+          {/* Public Routes */}
           <Route path="/" element={<LandingPage />} />
+          <Route path="/landing" element={<LandingPage />} />
           <Route path="/login" element={<LoginPage />} />
           <Route path="/signup" element={<SignupPage />} />
+
+          {/* Protected Routes */}
+          <Route element={<ProtectedRoute />}>
+            <Route element={<DashboardLayout />}>
+              <Route path="/dashboard" element={<DashboardPage />} />
+              <Route path="/universities" element={<UniversitiesPage />} />
+            </Route>
+          </Route>
+
+          {/* Onboarding Route */}
           <Route path="/onboarding" element={<OnboardingPage />} />
         </Routes>
       </Router>

@@ -83,12 +83,12 @@ const LoginPage = () => {
                     .single();
 
                 if (profile?.is_onboarding_complete) {
-                    navigate('/'); // Go to dashboard/home if complete
+                    navigate('/dashboard'); // Go to dashboard if complete
                 } else {
                     navigate('/onboarding'); // Go to onboarding if incomplete
                 }
             } else {
-                navigate('/');
+                navigate('/dashboard');
             }
 
         } catch (err: any) {

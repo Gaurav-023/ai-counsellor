@@ -99,5 +99,71 @@ WITH CHECK (auth.uid() = id);
 CREATE POLICY "Users can update own student profile"
 ON student_profiles
 FOR UPDATE
-USING (auth.uid() = id)
-WITH CHECK (auth.uid() = id);
+
+-- [AI Counsellor Expansion]
+
+-- 1. Universities Table
+CREATE TABLE universities (
+    id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+    name TEXT NOT NULL,
+    location TEXT,
+    country TEXT,
+    ranking INT,
+    acceptance_rate FLOAT, -- e.g. 0.05 for 5%
+    cost_range TEXT, -- 'High', 'Medium', 'Low'
+    logo_url TEXT,
+    tags TEXT[], -- Array of strings e.g. ['Ivy League', 'Tech', 'Safe']
+    created_at TIMESTAMPTZ DEFAULT now()
+);
+
+-- Enable RLS for universities (Public Read, Admin Write)
+ALTER TABLE universities ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Public can view universities" ON universities FOR SELECT USING (true);
+
+
+-- 2. University Shortlist Table
+CREATE TABLE university_shortlist (
+    id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+    user_id UUID REFERENCES auth.users(id) NOT NULL,
+    university_id UUID REFERENCES universities(id) NOT NULL,
+    category TEXT CHECK (category IN ('Dream', 'Target', 'Safe')),
+    status TEXT DEFAULT 'Shortlisted', -- 'Shortlisted', 'Locked'
+    notes TEXT,
+    created_at TIMESTAMPTZ DEFAULT now(),
+    UNIQUE(user_id, university_id)
+);
+
+-- Enable RLS for shortlist
+ALTER TABLE university_shortlist ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Users can manage their own shortlist" ON university_shortlist
+    USING (auth.uid() = user_id)
+    WITH CHECK (auth.uid() = user_id);
+
+
+-- 3. Chat Messages Table (Persistent AI History)
+CREATE TABLE chat_messages (
+    id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+    user_id UUID REFERENCES auth.users(id) NOT NULL,
+    role TEXT CHECK (role IN ('user', 'assistant')),
+    content TEXT NOT NULL,
+    created_at TIMESTAMPTZ DEFAULT now()
+);
+
+-- Enable RLS for chat
+ALTER TABLE chat_messages ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Users can manage their own chat history" ON chat_messages
+    USING (auth.uid() = user_id)
+    WITH CHECK (auth.uid() = user_id);
+
+
+-- 4. Seed Data: Universities
+INSERT INTO universities (name, location, country, ranking, acceptance_rate, cost_range, tags) VALUES
+('Stanford University', 'California', 'USA', 2, 0.04, 'High', ARRAY['Top Tier', 'Tech', 'Entrepreneurship']),
+('Massachusetts Institute of Technology (MIT)', 'Massachusetts', 'USA', 1, 0.04, 'High', ARRAY['Top Tier', 'STEM', 'Research']),
+('Harvard University', 'Massachusetts', 'USA', 3, 0.03, 'High', ARRAY['Ivy League', 'Law', 'Business']),
+('University of California, Berkeley', 'California', 'USA', 10, 0.11, 'Medium', ARRAY['Public Ivy', 'Research', 'Tech']),
+('Arizona State University', 'Arizona', 'USA', 156, 0.88, 'Low', ARRAY['Public', 'Large', 'Safe']),
+('University of Toronto', 'Toronto', 'Canada', 21, 0.43, 'Medium', ARRAY['Public', 'Research', 'Global']),
+('Imperial College London', 'London', 'UK', 6, 0.14, 'High', ARRAY['STEM', 'Global', 'Urban']),
+('National University of Singapore (NUS)', 'Singapore', 'Singapore', 11, 0.05, 'Medium', ARRAY['Asian Top', 'Tech', 'Global']);
+

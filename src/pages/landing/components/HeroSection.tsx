@@ -108,7 +108,7 @@ const HeroSection = () => {
                                         animate={{ backgroundPosition: ["0% 50%", "100% 50%"] }}
                                         transition={{ duration: 4, repeat: Infinity, ease: "linear" }}
                                     >
-                                        Journey with AI.
+                                        with a guided AI counsellor.
                                     </Box>
                                 </Typography>
                             </motion.div>
@@ -130,7 +130,7 @@ const HeroSection = () => {
                                         to="/signup"
                                         sx={{ fontSize: '1.1rem', py: 1.5, px: 4 }}
                                     >
-                                        Start Free Counselling
+                                        Get Started
                                     </Button>
                                     <Button
                                         variant="outlined"

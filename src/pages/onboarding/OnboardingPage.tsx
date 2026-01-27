@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useMutation } from '@tanstack/react-query';
 import OnboardingLayout from './OnboardingLayout';
@@ -14,7 +14,52 @@ const STEPS = ['Academic', 'Goals', 'Budget', 'Readiness'];
 const OnboardingPage = () => {
     const navigate = useNavigate();
     const [activeStep, setActiveStep] = useState(0);
-    const { academic, goals, budget, readiness, reset } = useOnboardingStore();
+    const {
+        academic, goals, budget, readiness, reset,
+        setAcademic, setGoals, setBudget, setReadiness
+    } = useOnboardingStore();
+
+    // 🔄 HYDRATION: Fetch existing profile on mount to sync with AI updates
+    useEffect(() => {
+        const loadExistingProfile = async () => {
+            const { data: { user } } = await supabase.auth.getUser();
+            if (!user) return;
+
+            const { data: profile } = await supabase
+                .from('student_profiles')
+                .select('*')
+                .eq('id', user.id)
+                .single();
+
+            if (profile) {
+                // Map DB schema back to Store schema
+                setAcademic({
+                    educationLevel: profile.education_level || '',
+                    degreeMajor: profile.degree_major || '',
+                    graduationYear: profile.graduation_year?.toString() || '',
+                    gpa: profile.gpa || ''
+                });
+
+                setGoals({
+                    intendedDegree: profile.intended_degree || '',
+                    preferredCountries: profile.preferred_countries || []
+                });
+
+                setBudget({
+                    budgetRange: profile.budget_range || '',
+                    fundingSource: profile.funding_source || ''
+                });
+
+                setReadiness({
+                    examIelts: profile.exam_ielts_status || 'not_planned',
+                    examIeltsScore: profile.exam_ielts_score || '',
+                    examGre: profile.exam_gre_status || 'not_planned',
+                    examGreScore: profile.exam_gre_score || ''
+                });
+            }
+        };
+        loadExistingProfile();
+    }, []);
 
     // TanStack Query Mutation for submitting data
     const submissionMutation = useMutation({
@@ -38,10 +83,10 @@ const OnboardingPage = () => {
                 exam_gre_score: readiness?.examGreScore,
             };
 
-            // Insert student profile
+            // Insert or Update student profile
             const { error: profileError } = await supabase
                 .from('student_profiles')
-                .insert(completeData);
+                .upsert(completeData);
 
             if (profileError) throw profileError;
 
@@ -57,7 +102,7 @@ const OnboardingPage = () => {
         },
         onSuccess: () => {
             reset(); // Clear store
-            navigate('/'); // Redirect to dashboard
+            navigate('/dashboard'); // Redirect to dashboard
         },
         onError: (error) => {
             console.error('Onboarding submission failed:', error);

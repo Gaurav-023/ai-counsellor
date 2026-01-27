@@ -19,7 +19,21 @@ export const budgetSchema = z.object({
 
 export const readinessSchema = z.object({
     examIelts: z.enum(['not_taken', 'planned', 'taken']),
+    examIeltsScore: z.string().optional(),
     examGre: z.enum(['not_taken', 'planned', 'taken']),
+    examGreScore: z.string().optional(),
+}).refine((data) => {
+    if (data.examIelts === 'taken' && !data.examIeltsScore) return false;
+    return true;
+}, {
+    message: "Score is required if taken",
+    path: ["examIeltsScore"]
+}).refine((data) => {
+    if (data.examGre === 'taken' && !data.examGreScore) return false;
+    return true;
+}, {
+    message: "Score is required if taken",
+    path: ["examGreScore"]
 });
 
 export type AcademicData = z.infer<typeof academicSchema>;
