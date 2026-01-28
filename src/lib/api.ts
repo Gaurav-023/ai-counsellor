@@ -24,6 +24,49 @@ export const getUniversityById = async (id: string): Promise<University | null> 
     return data as University;
 };
 
+export const getStudentProfile = async (): Promise<any> => {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return null;
+
+    const { data, error } = await supabase
+        .from('student_profiles')
+        .select('*')
+        .eq('id', user.id)
+        .single();
+
+    if (error) {
+        // If profile doesn't exist yet, return null
+        if (error.code === 'PGRST116') return null;
+        throw error;
+    }
+    return data;
+};
+
+export const searchUniversities = async (country: string): Promise<University[]> => {
+    try {
+        const response = await fetch(`http://universities.hipolabs.com/search?country=${encodeURIComponent(country)}`);
+        if (!response.ok) throw new Error('Failed to fetch from Hipolabs API');
+
+        const data = await response.json();
+
+        // Transform to match University interface
+        return data.slice(0, 500).map((u: any, index: number) => ({
+            id: `hipo-${index}-${u.name.replace(/\s+/g, '-').toLowerCase()}`, // Generate a temporary ID
+            name: u.name,
+            location: u['state-province'] || u.country,
+            country: u.country,
+            ranking: 0, // Not available
+            acceptance_rate: 0, // Not available
+            cost_range: 'Medium', // Default
+            tags: ['External'],
+            logo_url: undefined
+        }));
+    } catch (err) {
+        console.error("API Search Error:", err);
+        return [];
+    }
+};
+
 // --- Shortlist ---
 
 export const getShortlist = async (): Promise<ShortlistItem[]> => {

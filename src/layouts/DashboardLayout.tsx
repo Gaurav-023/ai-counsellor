@@ -34,6 +34,7 @@ const DashboardLayout = () => {
     const menuItems = [
         { text: 'Dashboard', icon: <Home01Icon size={24} />, path: '/dashboard' },
         { text: 'Universities', icon: <UniversityIcon size={24} />, path: '/universities' },
+        { text: 'Shortlist', icon: <BookOpen01Icon size={24} />, path: '/shortlist' },
         { text: 'Applications', icon: <BookOpen01Icon size={24} />, path: '/applications' },
         { text: 'Profile', icon: <UserIcon size={24} />, path: '/profile' },
         { text: 'Settings', icon: <Settings01Icon size={24} />, path: '/settings' },

@@ -11,6 +11,7 @@ import ProtectedRoute from './components/ProtectedRoute';
 import DashboardPage from './pages/dashboard/DashboardPage';
 import DashboardLayout from './layouts/DashboardLayout';
 import UniversitiesPage from './pages/universities/UniversitiesPage';
+import ShortlistPage from './pages/shortlist/ShortlistPage';
 
 function App() {
   return (
@@ -29,6 +30,7 @@ function App() {
             <Route element={<DashboardLayout />}>
               <Route path="/dashboard" element={<DashboardPage />} />
               <Route path="/universities" element={<UniversitiesPage />} />
+              <Route path="/shortlist" element={<ShortlistPage />} />
             </Route>
           </Route>
 

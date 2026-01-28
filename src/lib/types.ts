@@ -6,6 +6,10 @@ export interface University {
     ranking: number;
     acceptance_rate: number;
     cost_range: 'High' | 'Medium' | 'Low';
+    tuition_fee?: number; // Added for precise budget filtering
+    ai_classification?: 'Dream' | 'Target' | 'Safe'; // Added for AI recommendations
+    fit_reason?: string; // AI generated reason
+    risks?: string; // AI generated risks
     logo_url?: string;
     tags: string[];
 }
@@ -26,4 +30,13 @@ export interface ChatMessage {
     role: 'user' | 'assistant';
     content: string;
     created_at: string;
+}
+
+export interface StudentProfile {
+    id: string;
+    preferred_countries?: string[];
+    // Add other fields if needed, but for now we only need preferred_countries for search
+    education_level?: string;
+    degree_major?: string;
+    gpa?: string;
 }
