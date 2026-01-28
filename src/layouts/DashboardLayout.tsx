@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Box, Drawer, List, ListItem, ListItemButton, ListItemIcon, ListItemText, Button, Divider, IconButton, useTheme, useMediaQuery, AppBar, Toolbar, Avatar, Typography } from '@mui/material';
 import { Outlet, useNavigate, useLocation } from 'react-router-dom';
-import { Home01Icon, UniversityIcon, BookOpen01Icon, UserIcon, Settings01Icon, Logout01Icon, Menu01Icon, ArrowLeft02Icon, ArrowRight02Icon } from 'hugeicons-react';
+import { Home01Icon, UniversityIcon, BookOpen01Icon, UserIcon, Settings01Icon, Logout01Icon, Menu01Icon } from 'hugeicons-react';
 import { supabase } from '../lib/supabase';
 import { AIChat } from '../components/ai/AIChat';
 
@@ -35,8 +35,8 @@ const DashboardLayout = () => {
         { text: 'Dashboard', icon: <Home01Icon size={24} />, path: '/dashboard' },
         { text: 'Universities', icon: <UniversityIcon size={24} />, path: '/universities' },
         { text: 'Shortlist', icon: <BookOpen01Icon size={24} />, path: '/shortlist' },
-        { text: 'Applications', icon: <BookOpen01Icon size={24} />, path: '/applications' },
-        { text: 'Profile', icon: <UserIcon size={24} />, path: '/profile' },
+        // { text: 'Applications', icon: <BookOpen01Icon size={24} />, path: '/applications' }, // TODO: Implement
+        { text: 'Your Profile', icon: <UserIcon size={24} />, path: '/profile' },
         { text: 'Settings', icon: <Settings01Icon size={24} />, path: '/settings' },
     ];
 
@@ -44,7 +44,7 @@ const DashboardLayout = () => {
         <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column', bgcolor: 'white' }}>
             {/* Logo Area */}
             <Box sx={{ p: 3, display: 'flex', alignItems: 'center', gap: 2, justifyContent: isCollapsed ? 'center' : 'flex-start' }}>
-                <div style={{ width: 32, height: 32, borderRadius: 8, background: 'linear-gradient(135deg, #4f46e5 0%, #a855f7 100%)', flexShrink: 0 }}></div>
+                <img src="https://picsum.photos/48" alt="Logo" style={{ width: 32, height: 32, borderRadius: 8, objectFit: 'cover', flexShrink: 0 }} />
                 {!isCollapsed && (
                     <Box sx={{ display: 'flex', justifyContent: 'space-between', width: '100%', alignItems: 'center' }}>
                         <span style={{ fontWeight: 'bold', fontSize: '1.1rem', color: '#1e293b' }}>AI Counsellor</span>
@@ -55,7 +55,7 @@ const DashboardLayout = () => {
             {!isMobile && (
                 <Box sx={{ display: 'flex', justifyContent: isCollapsed ? 'center' : 'flex-end', px: 2, mb: 1 }}>
                     <IconButton onClick={handleCollapseToggle} size="small">
-                        {isCollapsed ? <ArrowRight02Icon size={20} /> : <ArrowLeft02Icon size={20} />}
+                        <Menu01Icon size={20} />
                     </IconButton>
                 </Box>
             )}

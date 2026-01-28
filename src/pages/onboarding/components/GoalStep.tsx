@@ -70,23 +70,42 @@ const GoalStep = ({ onNext, onBack }: StepProps) => {
 
             <Grid container spacing={3}>
                 <Grid item xs={12}>
+                    <Controller
+                        name="intendedDegree"
+                        control={control}
+                        render={({ field }) => (
+                            <TextField
+                                {...field}
+                                select
+                                fullWidth
+                                label="Intended Degree"
+                                placeholder="Select your target degree"
+                                variant="outlined"
+                                sx={glassInputSx}
+                                error={!!errors.intendedDegree}
+                                helperText={errors.intendedDegree?.message}
+                            >
+                                {commonDegrees.map((deg) => (
+                                    <MenuItem key={deg} value={deg}>{deg}</MenuItem>
+                                ))}
+                            </TextField>
+                        )}
+                    />
+                </Grid>
+
+                <Grid item xs={12}>
                     <TextField
-                        select
                         fullWidth
-                        label="Intended Degree"
-                        placeholder="Select your target degree"
+                        label="Intended Major / Field of Study"
+                        placeholder="e.g. Computer Science, Business Analytics"
                         variant="outlined"
                         sx={glassInputSx}
-                        defaultValue=""
-                        {...register('intendedDegree')}
-                        error={!!errors.intendedDegree}
-                        helperText={errors.intendedDegree?.message}
-                    >
-                        {commonDegrees.map((deg) => (
-                            <MenuItem key={deg} value={deg}>{deg}</MenuItem>
-                        ))}
-                    </TextField>
+                        {...register('fieldOfStudy')}
+                        error={!!errors.fieldOfStudy}
+                        helperText={errors.fieldOfStudy?.message}
+                    />
                 </Grid>
+
                 <Grid item xs={12}>
                     <Typography gutterBottom sx={{ color: 'rgba(255,255,255,0.7)', fontSize: '0.9rem', mb: 1 }}>
                         Preferred Countries

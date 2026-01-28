@@ -51,3 +51,4 @@ Thumbs.db
 
 # Database
 *.sql
+supabase_schema.sql

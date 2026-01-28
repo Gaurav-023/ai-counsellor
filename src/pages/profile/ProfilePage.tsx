@@ -1,0 +1,338 @@
+import { useState, useEffect } from 'react';
+import {
+    Box,
+    Typography,
+    Paper,
+    Grid,
+    TextField,
+    Button,
+    Divider,
+    MenuItem,
+    Chip,
+    Alert,
+    CircularProgress,
+    Snackbar
+} from '@mui/material';
+import {
+    UserCircleIcon,
+    Globe02Icon,
+    Coins01Icon,
+    BookOpen01Icon,
+    CheckmarkCircle01Icon
+} from 'hugeicons-react';
+import { getStudentProfile, updateStudentProfile } from '../../lib/api';
+
+import { events } from '../../lib/events';
+
+const ProfilePage = () => {
+    const [loading, setLoading] = useState(true);
+    const [saving, setSaving] = useState(false);
+    const [notification, setNotification] = useState<{ message: string, type: 'success' | 'error' } | null>(null);
+
+    const [formData, setFormData] = useState({
+        full_name: '',
+        education_level: '',
+        degree_major: '',
+        gpa: '',
+        graduation_year: '',
+        intended_degree: '',
+        field_of_study: '',
+        preferred_countries: [] as string[],
+        budget_range: '',
+        exam_ielts_status: '',
+        exam_ielts_score: '',
+        exam_gre_status: '',
+        exam_gre_score: ''
+    });
+
+    useEffect(() => {
+        loadProfile();
+
+        // Subscribe to global updates (e.g. from AI Chat actions)
+        const unsubscribe = events.subscribe(() => {
+            console.log("Profile refreshing due to global event...");
+            loadProfile();
+        });
+        return () => { unsubscribe(); };
+    }, []);
+
+    const loadProfile = async () => {
+        try {
+            // Only show loading spinner on initial load to avoid flickering updates
+            // setLoading(true); 
+            const profile = await getStudentProfile();
+            if (profile) {
+                setFormData({
+                    full_name: profile.full_name || '',
+                    education_level: profile.education_level || '',
+                    degree_major: profile.degree_major || '',
+                    gpa: profile.gpa || '',
+                    graduation_year: profile.graduation_year?.toString() || '',
+                    intended_degree: profile.intended_degree || '',
+                    field_of_study: profile.field_of_study || '',
+                    preferred_countries: profile.preferred_countries || [],
+                    budget_range: profile.budget_range || '',
+                    exam_ielts_status: profile.exam_ielts_status || 'Not Taken',
+                    exam_ielts_score: profile.exam_ielts_score || '',
+                    exam_gre_status: profile.exam_gre_status || 'Not Taken',
+                    exam_gre_score: profile.exam_gre_score || ''
+                });
+            }
+        } catch (err) {
+            console.error("Failed to load profile", err);
+            setNotification({ message: 'Failed to load profile data', type: 'error' });
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const handleChange = (field: string, value: any) => {
+        setFormData(prev => ({ ...prev, [field]: value }));
+    };
+
+    const handleSave = async () => {
+        try {
+            setSaving(true);
+            await updateStudentProfile({
+                ...formData,
+                graduation_year: formData.graduation_year ? parseInt(formData.graduation_year) : null
+            });
+
+            // Notify other components (Dashboard, etc) that profile has changed
+            events.emit();
+
+            // Re-fetch to ensure local state matches DB
+            await loadProfile();
+
+            setNotification({ message: 'Profile updated successfully! Recommendations will be recalculated.', type: 'success' });
+        } catch (err: any) {
+            setNotification({ message: 'Failed to save: ' + err.message, type: 'error' });
+        } finally {
+            setSaving(false);
+        }
+    };
+
+    if (loading) {
+        return (
+            <Box sx={{ display: 'flex', justifyContent: 'center', py: 10 }}>
+                <CircularProgress sx={{ color: '#f97316' }} />
+            </Box>
+        );
+    }
+
+    return (
+        <Box sx={{ maxWidth: 1000, mx: 'auto', pb: 8 }}>
+            <Box sx={{ mb: 4, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <Box>
+                    <Typography variant="h4" fontWeight="800" color="#0f172a">Your Profile</Typography>
+                    <Typography variant="body1" color="#64748b">
+                        Manage your academic details and preferences to get better AI recommendations.
+                    </Typography>
+                </Box>
+                <Button
+                    variant="contained"
+                    size="large"
+                    onClick={handleSave}
+                    disabled={saving}
+                    startIcon={saving ? <CircularProgress size={20} color="inherit" /> : <CheckmarkCircle01Icon />}
+                    sx={{
+                        bgcolor: '#0f172a',
+                        fontWeight: 700,
+                        '&:hover': { bgcolor: '#334155' }
+                    }}
+                >
+                    {saving ? 'Saving...' : 'Save Changes'}
+                </Button>
+            </Box>
+
+            <Grid container spacing={3}>
+                {/* Personal & Academic */}
+                <Grid item xs={12} md={8}>
+                    <Paper elevation={0} sx={{ p: 4, borderRadius: 4, border: '1px solid #e2e8f0', mb: 3 }}>
+                        <Typography variant="h6" fontWeight="700" sx={{ mb: 3, display: 'flex', alignItems: 'center', gap: 1 }}>
+                            <UserCircleIcon color="#f97316" /> Personal & Academic
+                        </Typography>
+                        <Grid container spacing={3}>
+                            <Grid item xs={12} sm={6}>
+                                <TextField
+                                    fullWidth label="Full Name"
+                                    value={formData.full_name}
+                                    onChange={(e) => handleChange('full_name', e.target.value)}
+                                />
+                            </Grid>
+                            <Grid item xs={12} sm={6}>
+                                <TextField
+                                    fullWidth label="Current GPA"
+                                    value={formData.gpa}
+                                    onChange={(e) => handleChange('gpa', e.target.value)}
+                                    helperText="e.g. 3.8/4.0 or 8.5/10"
+                                />
+                            </Grid>
+                            <Grid item xs={12} sm={6}>
+                                <TextField
+                                    fullWidth label="Major / Degree"
+                                    value={formData.degree_major}
+                                    onChange={(e) => handleChange('degree_major', e.target.value)}
+                                />
+                            </Grid>
+                            <Grid item xs={12} sm={6}>
+                                <TextField
+                                    fullWidth label="Graduation Year"
+                                    type="number"
+                                    value={formData.graduation_year}
+                                    onChange={(e) => handleChange('graduation_year', e.target.value)}
+                                />
+                            </Grid>
+                            <Grid item xs={12} sm={6}>
+                                <TextField
+                                    select fullWidth label="Education Level"
+                                    value={formData.education_level}
+                                    onChange={(e) => handleChange('education_level', e.target.value)}
+                                >
+                                    <MenuItem value="High School">High School</MenuItem>
+                                    <MenuItem value="Undergraduate">Undergraduate</MenuItem>
+                                    <MenuItem value="Postgraduate">Postgraduate</MenuItem>
+                                </TextField>
+                            </Grid>
+                        </Grid>
+                    </Paper>
+
+                    <Paper elevation={0} sx={{ p: 4, borderRadius: 4, border: '1px solid #e2e8f0' }}>
+                        <Typography variant="h6" fontWeight="700" sx={{ mb: 3, display: 'flex', alignItems: 'center', gap: 1 }}>
+                            <BookOpen01Icon color="#f97316" /> Test Scores
+                        </Typography>
+                        <Grid container spacing={3}>
+                            <Grid item xs={12} sm={6}>
+                                <TextField
+                                    select fullWidth label="IELTS / TOEFL Status"
+                                    value={formData.exam_ielts_status}
+                                    onChange={(e) => handleChange('exam_ielts_status', e.target.value)}
+                                >
+                                    <MenuItem value="Not Taken">Not Taken</MenuItem>
+                                    <MenuItem value="Planned">Planned</MenuItem>
+                                    <MenuItem value="Completed">Completed</MenuItem>
+                                </TextField>
+                            </Grid>
+                            {formData.exam_ielts_status === 'Completed' && (
+                                <Grid item xs={12} sm={6}>
+                                    <TextField
+                                        fullWidth label="Score"
+                                        value={formData.exam_ielts_score}
+                                        onChange={(e) => handleChange('exam_ielts_score', e.target.value)}
+                                    />
+                                </Grid>
+                            )}
+
+                            <Grid item xs={12} sm={6}>
+                                <TextField
+                                    select fullWidth label="GRE / GMAT Status"
+                                    value={formData.exam_gre_status}
+                                    onChange={(e) => handleChange('exam_gre_status', e.target.value)}
+                                >
+                                    <MenuItem value="Not Taken">Not Taken</MenuItem>
+                                    <MenuItem value="Planned">Planned</MenuItem>
+                                    <MenuItem value="Completed">Completed</MenuItem>
+                                </TextField>
+                            </Grid>
+                            {formData.exam_gre_status === 'Completed' && (
+                                <Grid item xs={12} sm={6}>
+                                    <TextField
+                                        fullWidth label="Score"
+                                        value={formData.exam_gre_score}
+                                        onChange={(e) => handleChange('exam_gre_score', e.target.value)}
+                                    />
+                                </Grid>
+                            )}
+                        </Grid>
+                    </Paper>
+                </Grid>
+
+                {/* Preferences Sidebar */}
+                <Grid item xs={12} md={4}>
+                    <Paper elevation={0} sx={{ p: 4, borderRadius: 4, border: '1px solid #e2e8f0', height: '100%' }}>
+                        <Typography variant="h6" fontWeight="700" sx={{ mb: 3, display: 'flex', alignItems: 'center', gap: 1 }}>
+                            <Globe02Icon color="#f97316" /> Study Goals
+                        </Typography>
+
+                        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+                            <TextField
+                                fullWidth label="Intended Major"
+                                value={formData.field_of_study}
+                                onChange={(e) => handleChange('field_of_study', e.target.value)}
+                            />
+                            <TextField
+                                select fullWidth label="Target Degree"
+                                value={formData.intended_degree}
+                                onChange={(e) => handleChange('intended_degree', e.target.value)}
+                            >
+                                <MenuItem value="Bachelors">Bachelors</MenuItem>
+                                <MenuItem value="Masters">Masters</MenuItem>
+                                <MenuItem value="PhD">PhD</MenuItem>
+                            </TextField>
+
+                            <Divider />
+
+                            <Box>
+                                <Typography variant="subtitle2" fontWeight="700" sx={{ mb: 1, display: 'flex', alignItems: 'center', gap: 1 }}>
+                                    <Coins01Icon size={16} /> Budget Range
+                                </Typography>
+                                <TextField
+                                    select fullWidth
+                                    value={formData.budget_range}
+                                    onChange={(e) => handleChange('budget_range', e.target.value)}
+                                >
+                                    <MenuItem value="< 20k">Less than $20k/yr</MenuItem>
+                                    <MenuItem value="20k - 40k">$20k - $40k/yr</MenuItem>
+                                    <MenuItem value="> 40k">More than $40k/yr</MenuItem>
+                                </TextField>
+                            </Box>
+
+                            <Box>
+                                <Typography variant="subtitle2" fontWeight="700" sx={{ mb: 1 }}>Preferred Countries</Typography>
+                                <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap', mb: 1 }}>
+                                    {formData.preferred_countries.map(c => (
+                                        <Chip
+                                            key={c}
+                                            label={c}
+                                            onDelete={() => {
+                                                handleChange('preferred_countries', formData.preferred_countries.filter(x => x !== c));
+                                            }}
+                                        />
+                                    ))}
+                                </Box>
+                                <TextField
+                                    select fullWidth label="Add Country"
+                                    value=""
+                                    onChange={(e) => {
+                                        if (e.target.value && !formData.preferred_countries.includes(e.target.value)) {
+                                            handleChange('preferred_countries', [...formData.preferred_countries, e.target.value]);
+                                        }
+                                    }}
+                                >
+                                    <MenuItem value="USA">USA</MenuItem>
+                                    <MenuItem value="UK">UK</MenuItem>
+                                    <MenuItem value="Canada">Canada</MenuItem>
+                                    <MenuItem value="Australia">Australia</MenuItem>
+                                    <MenuItem value="Germany">Germany</MenuItem>
+                                </TextField>
+                            </Box>
+                        </Box>
+                    </Paper>
+                </Grid>
+            </Grid>
+
+            <Snackbar
+                open={!!notification}
+                autoHideDuration={4000}
+                onClose={() => setNotification(null)}
+                anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+            >
+                <Alert severity={notification?.type as any} variant="filled" onClose={() => setNotification(null)}>
+                    {notification?.message}
+                </Alert>
+            </Snackbar>
+        </Box>
+    );
+};
+
+export default ProfilePage;

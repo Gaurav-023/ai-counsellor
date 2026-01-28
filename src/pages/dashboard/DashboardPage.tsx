@@ -5,7 +5,6 @@ import {
     Grid,
     Card,
     CardContent,
-    Button,
     List,
     ListItem,
     ListItemButton,
@@ -16,14 +15,20 @@ import {
     Stepper,
     Step,
     StepLabel,
-    Checkbox,
-    IconButton
+    IconButton,
+    CircularProgress,
+    Fade,
+    Grow
 } from '@mui/material';
 import {
-    Clock01Icon,
     PencilEdit02Icon,
     CheckmarkCircle01Icon,
-    AlertCircleIcon
+    AlertCircleIcon,
+    Delete02Icon,
+    Mortarboard01Icon,
+    Globe02Icon,
+    Calendar03Icon,
+    Money03Icon
 } from 'hugeicons-react';
 import { supabase } from '../../lib/supabase';
 import { useNavigate } from 'react-router-dom';
@@ -113,6 +118,7 @@ const DashboardPage = () => {
 
     // 3. Logic: Combine Static Recommendations + Dynamic AI Tasks
     interface DashboardTask {
+        id?: string;
         text: string;
         sub: string;
         checked: boolean;
@@ -125,6 +131,7 @@ const DashboardPage = () => {
         // Dynamic DB Tasks first (AI Generated)
         dbTasks.forEach(t => {
             tasks.push({
+                id: t.id,
                 text: t.text,
                 sub: 'Added by AI Counsellor',
                 checked: t.completed,
@@ -136,19 +143,39 @@ const DashboardPage = () => {
         if (!p?.gpa || !p?.education_level) {
             tasks.push({ text: 'Complete Profile Details', sub: 'Add GPA and Education Level', checked: false });
         }
-        if (p?.exam_ielts_status !== 'taken') {
-            tasks.push({ text: 'Take English Proficiency Test', sub: 'IELTS or TOEFL required', checked: false });
-        } else {
-            // If taken, maybe don't show or show as checked? Logic kept simple.
-        }
+        // Removed English Test as per user request
+        // if (p?.exam_ielts_status !== 'taken') {
+        //     tasks.push({ text: 'Take English Proficiency Test', sub: 'IELTS or TOEFL required', checked: false });
+        // }
         if (p?.intended_degree === 'Masters' && p?.exam_gre_status !== 'taken') {
             tasks.push({ text: 'Take GRE Exam', sub: 'Required for many MS programs', checked: false });
         }
-        if (p?.sop_status !== 'Ready') {
-            tasks.push({ text: 'Draft Statement of Purpose', sub: 'Write your SOP', checked: false });
-        }
+        // Removed SOP as per user request
+        // if (p?.sop_status !== 'Ready') {
+        //     tasks.push({ text: 'Draft Statement of Purpose', sub: 'Write your SOP', checked: false });
+        // }
 
         return tasks;
+    };
+
+    const handleToggleTask = async (task: DashboardTask) => {
+        if (task.isDynamic && task.id) {
+            // Optimistic update
+            const newTasks = dbTasks.map(t => t.id === task.id ? { ...t, completed: !t.completed } : t);
+            setDbTasks(newTasks);
+            try {
+                // Import API function locally to avoid circular dependencies if any, or just used imported one
+                const { updateTaskStatus } = await import('../../lib/api');
+                await updateTaskStatus(task.id, !task.checked);
+            } catch (err) {
+                console.error("Failed to update task", err);
+                // Revert on error
+                setDbTasks(dbTasks);
+            }
+        } else {
+            // Static task - redirect to profile to fix
+            navigate('/profile');
+        }
     };
 
 
@@ -160,247 +187,310 @@ const DashboardPage = () => {
     const strength = getProfileStrength(profile);
     const todoList = getCombinedTasks(profile);
 
-    const getStrengthChipColor = (val: string) => {
-        if (val === 'Strong' || val === 'Completed' || val === 'Ready') return 'success';
-        if (val === 'Average' || val === 'In Progress' || val === 'Draft') return 'warning';
-        return 'default';
+    // Removed unused getStrengthChipColor helper
+
+    const handleDeleteTask = async (task: DashboardTask) => {
+        if (!task.id) return;
+        // Optimistic update
+        const newTasks = dbTasks.filter(t => t.id !== task.id);
+        setDbTasks(newTasks);
+        try {
+            // Import API function locally
+            const { deleteTask } = await import('../../lib/api');
+            await deleteTask(task.id);
+        } catch (err) {
+            console.error("Failed to delete task", err);
+            // Revert (simplified re-fetch for now or state rollback)
+            fetchData();
+        }
     };
 
     return (
-        <Box>
-            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 4 }}>
-                <Box>
-                    <Typography variant="h4" fontWeight="bold" color="#1e293b">Control Center</Typography>
-                    <Typography variant="body1" color="#64748b">
-                        {STAGES[currentStage]}
-                    </Typography>
+        <Box sx={{ maxWidth: 1600, mx: 'auto', px: 2 }}>
+            {/* Header Section */}
+            <Fade in={true} timeout={800}>
+                <Box sx={{ mb: 5, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <Box>
+                        <Typography variant="h3" fontWeight="800" color="#1e293b" sx={{ letterSpacing: '-0.03em', mb: 1 }}>
+                            Hello, {profile?.full_name?.split(' ')[0] || 'Student'}
+                        </Typography>
+                        <Typography variant="body1" color="#64748b" sx={{ fontSize: '1.1rem', maxWidth: 500 }}>
+                            Your application journey is on track. Here's what needs your attention today.
+                        </Typography>
+                    </Box>
+                    <Box sx={{ display: { xs: 'none', md: 'flex' }, alignItems: 'center', gap: 2, bgcolor: 'white', px: 2, py: 1, borderRadius: 4, boxShadow: '0 2px 10px rgba(0,0,0,0.03)' }}>
+                        <Typography variant="caption" fontWeight="700" color="#94a3b8" sx={{ textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                            Current Phase
+                        </Typography>
+                        <Chip
+                            label={STAGES[currentStage]}
+                            sx={{
+                                bgcolor: 'rgba(59, 130, 246, 0.1)',
+                                color: '#2563eb',
+                                fontWeight: 700,
+                                borderRadius: 2,
+                                px: 0.5,
+                                height: 32,
+                                fontSize: '0.85rem'
+                            }}
+                        />
+                    </Box>
                 </Box>
-            </Box>
+            </Fade>
 
-            <Grid container spacing={3}>
+            <Grid container spacing={4}>
 
-                {/* C. Current Stage Indicator */}
-                <Grid item xs={12}>
-                    <Card sx={{ borderRadius: 3, border: '1px solid #e2e8f0', boxShadow: 'none' }}>
-                        <CardContent sx={{ py: 4 }}>
-                            <Stepper activeStep={currentStage} alternativeLabel>
-                                {STAGES.map((label) => (
-                                    <Step key={label}>
-                                        <StepLabel>{label}</StepLabel>
-                                    </Step>
-                                ))}
-                            </Stepper>
-                        </CardContent>
-                    </Card>
-                </Grid>
+                {/* LEFT COLUMN: Main Actions & Stats */}
+                <Grid item xs={12} lg={8}>
 
-                {/* A. Profile Summary */}
-                <Grid item xs={12} md={6}>
-                    <Card sx={{ height: '100%', borderRadius: 3, border: '1px solid #e2e8f0', boxShadow: 'none', position: 'relative' }}>
-                        <CardContent>
-                            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                                <Typography variant="h6" fontWeight="bold" color="#1e293b" gutterBottom>Profile Summary</Typography>
-                                <IconButton
-                                    size="small"
-                                    onClick={() => navigate('/onboarding')}
-                                    sx={{ bgcolor: '#f1f5f9', '&:hover': { bgcolor: '#e2e8f0' } }}
-                                >
-                                    <PencilEdit02Icon size={16} />
-                                </IconButton>
-                            </Box>
+                    {/* Profile Snapshot Grid */}
+                    <Fade in={true} timeout={1000}>
+                        <Grid container spacing={2} sx={{ mb: 5 }}>
+                            {[
+                                { label: 'Degree', value: profile?.intended_degree || 'TBD', icon: <Mortarboard01Icon size={20} color="#6366f1" />, bg: '#eef2ff' },
+                                { label: 'GPA', value: profile?.gpa || '-', icon: <AlertCircleIcon size={20} color="#f59e0b" />, bg: '#fffbeb' },
+                                { label: 'Budget', value: profile?.budget_range || '-', icon: <Money03Icon size={20} color="#10b981" />, bg: '#ecfdf5' },
+                                { label: 'Major', value: profile?.degree_major || '-', icon: <Calendar03Icon size={20} color="#ec4899" />, bg: '#fdf2f8' },
+                                { label: 'Target', value: profile?.preferred_countries?.[0] || 'Global', icon: <Globe02Icon size={20} color="#0ea5e9" />, bg: '#f0f9ff' },
+                            ].map((stat, i) => (
+                                <Grid item xs={6} sm={4} md={2.4} key={i}>
+                                    <Grow in={true} timeout={1000 + (i * 100)}>
+                                        <Card sx={{
+                                            borderRadius: 5,
+                                            bgcolor: 'white',
+                                            boxShadow: '0 4px 20px rgba(0, 0, 0, 0.02)', // Softer shadow
+                                            border: '1px solid transparent',
+                                            height: '100%',
+                                            transition: 'all 0.3s ease',
+                                            '&:hover': { transform: 'translateY(-4px)', boxShadow: '0 12px 24px rgba(0, 0, 0, 0.06)' }
+                                        }}>
+                                            <CardContent sx={{ p: 2.5, '&:last-child': { pb: 2.5 } }}>
+                                                <Box sx={{
+                                                    width: 40, height: 40, mb: 2, borderRadius: 3, bgcolor: stat.bg,
+                                                    display: 'flex', alignItems: 'center', justifyContent: 'center'
+                                                }}>
+                                                    {stat.icon}
+                                                </Box>
+                                                <Typography variant="caption" fontWeight="700" color="#94a3b8" sx={{ textTransform: 'uppercase', letterSpacing: '0.05em', display: 'block', mb: 0.5 }}>
+                                                    {stat.label}
+                                                </Typography>
+                                                <Typography variant="body1" fontWeight="700" color="#1e293b" noWrap title={typeof stat.value === 'string' ? stat.value : ''}>
+                                                    {stat.value}
+                                                </Typography>
+                                            </CardContent>
+                                        </Card>
+                                    </Grow>
+                                </Grid>
+                            ))}
+                        </Grid>
+                    </Fade>
 
-                            <Grid container spacing={2} sx={{ mt: 1 }}>
-                                <Grid item xs={6}>
+                    {/* Action Plan (Redesigned) */}
+                    <Fade in={true} timeout={1400}>
+                        <Card sx={{
+                            borderRadius: 6, // Increased radius
+                            border: 'none',
+                            bgcolor: 'white',
+                            boxShadow: '0 4px 24px rgba(0, 0, 0, 0.03)', // Softer shadow
+                            overflow: 'visible'
+                        }}>
+                            <CardContent sx={{ p: 0 }}>
+                                <Box sx={{ p: 5, display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #f8fafc' }}>
                                     <Box>
-                                        <Typography variant="caption" color="#64748b" fontWeight="600">EDUCATION</Typography>
-                                        <Typography variant="body2" fontWeight="500">
-                                            {profile?.education_level || 'N/A'}
-                                            {profile?.degree_major ? ` • ${profile.degree_major}` : ''}
+                                        <Typography variant="h5" fontWeight="800" color="#1e293b" sx={{ letterSpacing: '-0.02em', mb: 0.5 }}>Action Plan</Typography>
+                                        <Typography variant="body1" color="#64748b">
+                                            You have completed {todoList.filter(t => t.checked).length} out of {todoList.length} recommended tasks.
                                         </Typography>
                                     </Box>
-                                </Grid>
-                                <Grid item xs={6}>
-                                    <Box>
-                                        <Typography variant="caption" color="#64748b" fontWeight="600">GPA / GRADE</Typography>
-                                        <Typography variant="body2" fontWeight="500">{profile?.gpa || 'Not specified'}</Typography>
-                                    </Box>
-                                </Grid>
-
-                                <Grid item xs={6}>
-                                    <Box>
-                                        <Typography variant="caption" color="#64748b" fontWeight="600">TARGET INTAKE</Typography>
-                                        <Typography variant="body2" fontWeight="500">{profile?.intended_degree || 'Not specified'}</Typography>
-                                    </Box>
-                                </Grid>
-                                <Grid item xs={6}>
-                                    <Box>
-                                        <Typography variant="caption" color="#64748b" fontWeight="600">BUDGET</Typography>
-                                        <Typography variant="body2" fontWeight="500">{profile?.budget_range || 'Not specified'}</Typography>
-                                    </Box>
-                                </Grid>
-
-                                <Grid item xs={12}>
-                                    <Box>
-                                        <Typography variant="caption" color="#64748b" fontWeight="600">EXAMS</Typography>
-                                        <Box sx={{ display: 'flex', gap: 1, mt: 0.5 }}>
-                                            <Chip
-                                                label={`IELTS: ${profile?.exam_ielts_score || profile?.exam_ielts_status || 'N/A'}`}
-                                                size="small"
-                                                variant="outlined"
-                                                color={profile?.exam_ielts_status === 'taken' ? 'success' : 'default'}
-                                            />
-                                            <Chip
-                                                label={`GRE: ${profile?.exam_gre_score || profile?.exam_gre_status || 'N/A'}`}
-                                                size="small"
-                                                variant="outlined"
-                                                color={profile?.exam_gre_status === 'taken' ? 'success' : 'default'}
-                                            />
+                                    <Box sx={{ position: 'relative', display: 'inline-flex' }}>
+                                        <CircularProgress
+                                            variant="determinate"
+                                            value={100}
+                                            size={68}
+                                            thickness={3}
+                                            sx={{ color: '#f1f5f9', position: 'absolute' }}
+                                        />
+                                        <CircularProgress
+                                            variant="determinate"
+                                            value={todoList.length > 0 ? (todoList.filter(t => t.checked).length / todoList.length) * 100 : 0}
+                                            size={68}
+                                            thickness={3}
+                                            sx={{ color: '#f97316', strokeLinecap: 'round' }}
+                                        />
+                                        <Box sx={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                            <Typography variant="body2" fontWeight="800" color="#1e293b">
+                                                {Math.round(todoList.length > 0 ? (todoList.filter(t => t.checked).length / todoList.length) * 100 : 0)}%
+                                            </Typography>
                                         </Box>
                                     </Box>
-                                </Grid>
-
-                                <Grid item xs={12}>
-                                    <Box>
-                                        <Typography variant="caption" color="#64748b" fontWeight="600">COUNTRIES</Typography>
-                                        <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap', mt: 0.5 }}>
-                                            {profile?.preferred_countries && profile.preferred_countries.length > 0 ? (
-                                                profile.preferred_countries.map((c: string) => (
-                                                    <Chip key={c} label={c} size="small" sx={{ bgcolor: '#f1f5f9', borderRadius: 1 }} />
-                                                ))
-                                            ) : (
-                                                <Typography variant="body2" color="text.secondary">None selected</Typography>
-                                            )}
-                                        </Box>
-                                    </Box>
-                                </Grid>
-                            </Grid>
-                        </CardContent>
-                    </Card>
-                </Grid>
-
-                {/* B. Profile Strength */}
-                <Grid item xs={12} md={6}>
-                    <Card sx={{ height: '100%', borderRadius: 3, border: '1px solid #e2e8f0', boxShadow: 'none' }}>
-                        <CardContent>
-                            <Typography variant="h6" fontWeight="bold" color="#1e293b" gutterBottom>Profile Strength</Typography>
-
-                            <Stack spacing={3} sx={{ mt: 3 }}>
-                                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                    <Typography variant="body2" fontWeight="500">Academics</Typography>
-                                    <Chip
-                                        label={strength.academic}
-                                        color={getStrengthChipColor(strength.academic)}
-                                        size="small"
-                                        variant="outlined"
-                                    />
                                 </Box>
-                                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                    <Typography variant="body2" fontWeight="500">Exams</Typography>
-                                    <Chip
-                                        label={strength.exams}
-                                        color={getStrengthChipColor(strength.exams)}
-                                        size="small"
-                                        variant="outlined"
-                                    />
-                                </Box>
-                                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                    <Typography variant="body2" fontWeight="500">SOP</Typography>
-                                    <Chip
-                                        label={strength.sop}
-                                        color={getStrengthChipColor(strength.sop)}
-                                        size="small"
-                                        variant="outlined"
-                                    />
-                                </Box>
-                            </Stack>
 
-                            {/* AI Insight Box */}
-                            <Box sx={{ mt: 4, bgcolor: '#f0f9ff', p: 2, borderRadius: 2, border: '1px solid #e0f2fe' }}>
-                                <Box sx={{ display: 'flex', gap: 1, mb: 1 }}>
-                                    <AlertCircleIcon size={18} color="#0284c7" />
-                                    <Typography variant="subtitle2" fontWeight="bold" color="#0284c7">AI Insight</Typography>
-                                </Box>
-                                <Typography variant="body2" color="#334155">
-                                    {strength.academic === 'Strong'
-                                        ? "Your academic profile is solid. Focus on standardizing tests to target Tier 1 universities."
-                                        : "Improve your profile strength by detailing your projects and work experience in the SOP."}
-                                </Typography>
-                            </Box>
-                        </CardContent>
-                    </Card>
-                </Grid>
-
-                {/* D. AI To-Do List */}
-                <Grid item xs={12}>
-                    <Card sx={{ borderRadius: 3, border: '1px solid #e2e8f0', boxShadow: 'none' }}>
-                        <CardContent>
-                            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-                                <Typography variant="h6" fontWeight="bold" color="#1e293b">Recommended Actions</Typography>
-                                <Chip
-                                    icon={<Clock01Icon size={14} />}
-                                    label={`${todoList.filter(t => !t.checked).length} Pending`}
-                                    size="small"
-                                    color="primary"
-                                    sx={{ bgcolor: '#eff6ff', color: '#1d4ed8' }}
-                                />
-                            </Box>
-                            <List>
-                                {todoList.map((task, idx) => (
-                                    <ListItem
-                                        key={idx}
-                                        disablePadding
-                                        sx={{
-                                            borderBottom: idx !== todoList.length - 1 ? '1px solid #f1f5f9' : 'none',
-                                            py: 1.5
-                                        }}
-                                    >
-                                        <ListItemButton disableRipple sx={{ cursor: 'default', '&:hover': { bgcolor: 'transparent' } }}>
-                                            <ListItemIcon sx={{ minWidth: 40 }}>
-                                                {task.checked ? (
-                                                    <CheckmarkCircle01Icon size={24} color="#10b981" />
-                                                ) : (
-                                                    <Checkbox edge="start" checked={false} tabIndex={-1} disableRipple />
-                                                )}
-                                            </ListItemIcon>
-                                            <ListItemText
-                                                primary={
-                                                    <Typography
-                                                        variant="body1"
+                                <List sx={{ px: 0, py: 1 }}>
+                                    {todoList.map((task, idx) => (
+                                        <ListItem
+                                            key={idx}
+                                            disablePadding
+                                            secondaryAction={
+                                                task.isDynamic && (
+                                                    <IconButton
+                                                        edge="end"
+                                                        onClick={(e) => { e.stopPropagation(); handleDeleteTask(task); }}
                                                         sx={{
-                                                            textDecoration: task.checked ? 'line-through' : 'none',
-                                                            color: task.checked ? '#94a3b8' : '#1e293b',
-                                                            fontWeight: 500
+                                                            opacity: 1, // Always visible
+                                                            transition: 'all 0.2s',
+                                                            color: '#cbd5e1', // Neutral default
+                                                            '&:hover': { color: '#ef4444', bgcolor: '#fee2e2', transform: 'scale(1.1)' }
                                                         }}
                                                     >
-                                                        {task.text}
-                                                    </Typography>
+                                                        <Delete02Icon size={20} />
+                                                    </IconButton>
+                                                )
+                                            }
+                                            sx={{
+                                                borderBottom: '1px solid #f8fafc',
+                                                transition: 'all 0.2s',
+                                                '&:hover': {
+                                                    bgcolor: '#fafafa',
                                                 }
-                                                secondary={
-                                                    <Typography variant="body2" color="#64748b">
-                                                        {task.sub}
-                                                    </Typography>
-                                                }
-                                            />
-                                            {/* Only show Start button for standard non-dynamic tasks for now */}
-                                            {!task.checked && !task.isDynamic && (
-                                                <Button
-                                                    size="small"
-                                                    variant="outlined"
-                                                    color="primary"
-                                                    onClick={() => navigate('/onboarding')}
-                                                    sx={{ borderRadius: 2, textTransform: 'none', fontWeight: 600 }}
-                                                >
-                                                    Start
-                                                </Button>
-                                            )}
-                                        </ListItemButton>
-                                    </ListItem>
-                                ))}
-                            </List>
-                        </CardContent>
-                    </Card>
+                                            }}
+                                        >
+                                            <ListItemButton
+                                                onClick={() => handleToggleTask(task)}
+                                                disableRipple
+                                                sx={{ py: 3, px: 5 }}
+                                            >
+                                                <ListItemIcon sx={{ minWidth: 56 }}>
+                                                    {task.checked ? (
+                                                        <Box sx={{
+                                                            width: 28, height: 28, borderRadius: '50%',
+                                                            bgcolor: '#dcfce7', color: '#16a34a',
+                                                            display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                                        }}>
+                                                            <CheckmarkCircle01Icon size={18} />
+                                                        </Box>
+                                                    ) : (
+                                                        <Box sx={{
+                                                            width: 28, height: 28, borderRadius: '50%',
+                                                            border: '2px solid #e2e8f0',
+                                                            transition: 'all 0.2s',
+                                                            bgcolor: '#fff',
+                                                            '&:hover': { borderColor: '#94a3b8' }
+                                                        }} />
+                                                    )}
+                                                </ListItemIcon>
+                                                <ListItemText
+                                                    primary={
+                                                        <Typography variant="body1" fontWeight={600} sx={{
+                                                            textDecoration: task.checked ? 'line-through' : 'none',
+                                                            color: task.checked ? '#94a3b8' : '#334155',
+                                                            fontSize: '1.05rem',
+                                                            mb: 0.5
+                                                        }}>
+                                                            {task.text}
+                                                        </Typography>
+                                                    }
+                                                    secondary={
+                                                        <Typography variant="body2" color="#94a3b8" fontWeight="500">
+                                                            {task.sub}
+                                                        </Typography>
+                                                    }
+                                                />
+                                            </ListItemButton>
+                                        </ListItem>
+                                    ))}
+                                </List>
+                                {todoList.length === 0 && (
+                                    <Box sx={{ p: 8, textAlign: 'center' }}>
+                                        <Typography color="#94a3b8" fontWeight="500" fontSize="1.1rem">All caught up. Good job!</Typography>
+                                    </Box>
+                                )}
+                            </CardContent>
+                        </Card>
+                    </Fade>
                 </Grid>
 
+                {/* RIGHT COLUMN: Profile Strength & Progress */}
+                <Grid item xs={12} lg={4}>
+                    <Fade in={true} timeout={1600}>
+                        <Stack spacing={4}>
+
+                            {/* Application Readiness (Light Theme) */}
+                            <Card sx={{
+                                borderRadius: 5,
+                                border: 'none',
+                                boxShadow: '0 4px 24px rgba(0, 0, 0, 0.05)',
+                                bgcolor: 'white',
+                                color: '#0f172a'
+                            }}>
+                                <CardContent sx={{ p: 4 }}>
+                                    <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 4, alignItems: 'center' }}>
+                                        <Typography variant="h6" fontWeight="800" letterSpacing="-0.01em">Readiness Score</Typography>
+                                        <IconButton size="small" sx={{ bgcolor: '#f8fafc', '&:hover': { bgcolor: '#f1f5f9' } }} onClick={() => navigate('/profile')}>
+                                            <PencilEdit02Icon size={18} color="#64748b" />
+                                        </IconButton>
+                                    </Box>
+
+                                    <Stack spacing={3}>
+                                        {[
+                                            { label: 'Academics', val: strength.academic },
+                                            { label: 'Test Scores', val: strength.exams },
+                                            { label: 'SOP', val: strength.sop },
+                                        ].map((s, i) => (
+                                            <Box key={i}>
+                                                <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1.5 }}>
+                                                    <Typography variant="body2" fontWeight="600" color="#64748b">{s.label}</Typography>
+                                                    <Typography variant="body2" fontWeight="700"
+                                                        color={s.val === 'Strong' || s.val === 'Completed' || s.val === 'Ready' ? '#16a34a' : '#eab308'}>
+                                                        {s.val}
+                                                    </Typography>
+                                                </Box>
+                                                <Box sx={{ height: 8, bgcolor: '#f1f5f9', borderRadius: 5, overflow: 'hidden' }}>
+                                                    <Box sx={{
+                                                        height: '100%',
+                                                        width: s.val === 'Strong' || s.val === 'Completed' || s.val === 'Ready' ? '100%' : (s.val === 'Average' || s.val === 'In Progress' ? '50%' : '15%'),
+                                                        bgcolor: s.val === 'Strong' || s.val === 'Completed' || s.val === 'Ready' ? '#22c55e' : '#facc15',
+                                                        borderRadius: 5,
+                                                        transition: 'width 1s ease-in-out'
+                                                    }} />
+                                                </Box>
+                                            </Box>
+                                        ))}
+                                    </Stack>
+
+                                    <Box sx={{ mt: 4, p: 2.5, bgcolor: '#f0f9ff', borderRadius: 3, display: 'flex', gap: 2, alignItems: 'start' }}>
+                                        <AlertCircleIcon size={22} color="#0ea5e9" style={{ marginTop: 2 }} />
+                                        <Typography variant="body2" fontWeight="500" color="#0c4a6e" sx={{ lineHeight: 1.6 }}>
+                                            {strength.academic === 'Strong'
+                                                ? "Your academics are strong. Focus on maximizing your test scores to unlock top universities."
+                                                : "Boost your admission chances by highlighting personal projects in your Statement of Purpose."}
+                                        </Typography>
+                                    </Box>
+                                </CardContent>
+                            </Card>
+
+                            {/* Progress Stepper */}
+                            <Card sx={{ borderRadius: 5, border: 'none', boxShadow: 'none', bgcolor: 'transparent' }}>
+                                <CardContent sx={{ p: 0 }}>
+                                    <Typography variant="h6" fontWeight="800" color="#1e293b" sx={{ mb: 3, px: 1 }}>Your Journey</Typography>
+                                    <Stepper activeStep={currentStage} orientation="vertical" sx={{
+                                        '& .MuiStepConnector-line': { borderColor: '#e2e8f0', minHeight: 32 },
+                                        '& .MuiStepLabel-iconContainer': { paddingRight: 2 },
+                                        '& .MuiStepLabel-label': { fontWeight: 600, color: '#94a3b8', fontSize: '0.95rem' },
+                                        '& .MuiStepLabel-label.Mui-active': { color: '#0f172a', fontWeight: 700 },
+                                        '& .MuiStepLabel-label.Mui-completed': { color: '#10b981' },
+                                    }}>
+                                        {STAGES.map((label) => (
+                                            <Step key={label}>
+                                                <StepLabel>{label}</StepLabel>
+                                            </Step>
+                                        ))}
+                                    </Stepper>
+                                </CardContent>
+                            </Card>
+
+                        </Stack>
+                    </Fade>
+                </Grid>
             </Grid>
         </Box>
     );

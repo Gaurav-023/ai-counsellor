@@ -42,6 +42,7 @@ const OnboardingPage = () => {
 
                 setGoals({
                     intendedDegree: profile.intended_degree || '',
+                    fieldOfStudy: profile.field_of_study || '',
                     preferredCountries: profile.preferred_countries || []
                 });
 
@@ -74,6 +75,7 @@ const OnboardingPage = () => {
                 graduation_year: parseInt(academic?.graduationYear || '0'),
                 gpa: academic?.gpa,
                 intended_degree: goals?.intendedDegree,
+                field_of_study: goals?.fieldOfStudy,
                 preferred_countries: goals?.preferredCountries,
                 budget_range: budget?.budgetRange,
                 funding_source: budget?.fundingSource,

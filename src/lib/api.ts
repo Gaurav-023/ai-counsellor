@@ -28,18 +28,31 @@ export const getStudentProfile = async (): Promise<any> => {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return null;
 
-    const { data, error } = await supabase
+    // Fetch basic profile (name, etc.)
+    const { data: profileData, error: profileError } = await supabase
+        .from('profiles')
+        .select('full_name')
+        .eq('id', user.id)
+        .single();
+    
+    if (profileError) console.error('Error fetching basic profile:', profileError);
+
+    // Fetch student details
+    const { data: studentData, error: studentError } = await supabase
         .from('student_profiles')
         .select('*')
         .eq('id', user.id)
         .single();
 
-    if (error) {
-        // If profile doesn't exist yet, return null
-        if (error.code === 'PGRST116') return null;
-        throw error;
+    if (studentError && studentError.code !== 'PGRST116') {
+        throw studentError;
     }
-    return data;
+
+    // Merge data: precedence to studentData, but add full_name from profileData
+    return {
+        ...(studentData || {}),
+        full_name: profileData?.full_name || ''
+    };
 };
 
 export const searchUniversities = async (country: string): Promise<University[]> => {
@@ -65,6 +78,37 @@ export const searchUniversities = async (country: string): Promise<University[]>
         console.error("API Search Error:", err);
         return [];
     }
+};
+
+// --- Helper: Ensure University Exists (for Hipo/External IDs) ---
+export const ensureUniversityExists = async (uni: University): Promise<string> => {
+    // 1. Check if it already exists by name and country
+    const { data: existing } = await supabase
+        .from('universities')
+        .select('id')
+        .eq('name', uni.name)
+        .eq('country', uni.country)
+        .single();
+
+    if (existing) return existing.id;
+
+    // 2. If not, insert it
+    const { data: newUni, error } = await supabase
+        .from('universities')
+        .insert({
+            name: uni.name,
+            location: uni.location,
+            country: uni.country,
+            ranking: uni.ranking || null, // API might return 0
+            acceptance_rate: uni.acceptance_rate || null,
+            cost_range: uni.cost_range || 'Medium',
+            tags: ['External']
+        })
+        .select('id')
+        .single();
+
+    if (error) throw error;
+    return newUni.id;
 };
 
 // --- Shortlist ---
@@ -168,21 +212,46 @@ export const updateTaskStatus = async (taskId: string, completed: boolean): Prom
     return data as Task;
 };
 
+export const deleteTask = async (taskId: string): Promise<void> => {
+    const { error } = await supabase
+        .from('student_tasks')
+        .delete()
+        .eq('id', taskId);
+    if (error) throw error;
+};
+
 // --- Profile Management ---
 
 export const updateStudentProfile = async (updates: any) => {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) throw new Error("User not authenticated");
 
-    const { data, error } = await supabase
-        .from('student_profiles')
-        .update(updates)
-        .eq('id', user.id)
-        .select()
-        .single();
+    const { full_name, ...profileUpdates } = updates;
 
-    if (error) throw error;
-    return data;
+    // 1. Update Public Profile (full_name)
+    if (full_name !== undefined) {
+        const { error: profileError } = await supabase
+            .from('profiles')
+            .update({ full_name })
+            .eq('id', user.id);
+
+        if (profileError) throw profileError;
+    }
+
+    // 2. Update Student Profile (Detailed Data)
+    // Only proceed if there are other fields to update
+    if (Object.keys(profileUpdates).length > 0) {
+        // First check if a row exists, if not, we might need to upsert (though triggers usually create it)
+        // But for update specifically:
+        const { data, error } = await supabase
+            .from('student_profiles')
+            .upsert({ id: user.id, ...profileUpdates }) // Use upsert to be safe
+            .select()
+            .single();
+
+        if (error) throw error;
+        return data;
+    }
 };
 
 // --- AI Chat (Edge Function Integration) ---

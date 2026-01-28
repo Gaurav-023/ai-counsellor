@@ -119,6 +119,7 @@ CREATE TABLE universities (
 -- Enable RLS for universities (Public Read, Admin Write)
 ALTER TABLE universities ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "Public can view universities" ON universities FOR SELECT USING (true);
+CREATE POLICY "Authenticated users can insert universities" ON universities FOR INSERT WITH CHECK (auth.role() = 'authenticated');
 
 
 -- 2. University Shortlist Table

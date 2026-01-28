@@ -9,6 +9,7 @@ export const academicSchema = z.object({
 
 export const goalSchema = z.object({
     intendedDegree: z.string().min(1, 'Intended degree is required'),
+    fieldOfStudy: z.string().min(1, 'Intended major/field is required'),
     preferredCountries: z.array(z.string()).min(1, 'Select at least one country'),
 });
 

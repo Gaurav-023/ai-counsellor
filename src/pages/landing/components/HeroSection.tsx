@@ -95,20 +95,25 @@ const HeroSection = () => {
                                     fontWeight: 800
                                 }}>
                                     Plan your study-abroad <br />
-                                    <Box
-                                        component={motion.span}
-                                        sx={{
-                                            fontFamily: '"Cormorant Garamond", serif',
-                                            fontStyle: 'italic',
-                                            color: 'transparent',
-                                            backgroundClip: 'text',
-                                            backgroundImage: `linear-gradient(to right, ${theme.palette.primary.main}, ${theme.palette.secondary.main}, ${theme.palette.primary.main})`,
-                                            backgroundSize: '200% auto',
-                                        }}
-                                        animate={{ backgroundPosition: ["0% 50%", "100% 50%"] }}
-                                        transition={{ duration: 4, repeat: Infinity, ease: "linear" }}
-                                    >
-                                        with a guided AI counsellor.
+                                    <Box component="span" sx={{
+                                        fontFamily: '"Playfair Display", "Times New Roman", serif',
+                                        fontStyle: 'italic',
+                                        fontWeight: 400,
+                                        color: 'primary.main',
+                                        position: 'relative',
+                                        display: 'inline-block',
+                                        '&::after': {
+                                            content: '""',
+                                            position: 'absolute',
+                                            bottom: 10,
+                                            left: 0,
+                                            width: '100%',
+                                            height: '2px',
+                                            bgcolor: 'primary.main',
+                                            opacity: 0.3
+                                        }
+                                    }}>
+                                        journey with AI.
                                     </Box>
                                 </Typography>
                             </motion.div>
@@ -148,7 +153,7 @@ const HeroSection = () => {
                     </Grid>
                 </Grid>
             </Container>
-        </Box>
+        </Box >
     );
 };
 

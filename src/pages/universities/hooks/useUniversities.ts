@@ -15,7 +15,7 @@ export const useUniversities = () => {
     const [universities, setUniversities] = useState<University[]>([]);
     const [shortlist, setShortlist] = useState<ShortlistItem[]>([]);
     const [loading, setLoading] = useState(true);
-    const [error, setError] = useState('');
+    const [error] = useState<string | null>(null);
 
     const [filters, setFilters] = useState<FilterState>({
         search: '',
@@ -38,7 +38,7 @@ export const useUniversities = () => {
         return value / 10000;
     };
 
-    const augmentUniversityData = (uni: University): University => {
+    const augmentUniversityData = (uni: University, profile: any): University => {
         const rand = pseudoRandom(uni.name + uni.country);
 
         // Simulate Tuition: $15,000 to $65,000
@@ -50,15 +50,43 @@ export const useUniversities = () => {
         // Simulate Ranking: 1 to 1000
         const ranking = uni.ranking || Math.floor(1 + (pseudoRandom(uni.name + 'rank') * 1000));
 
-        // AI Classification based on acceptance
+        // --- DYNAMIC AI CLASSIFICATION ---
         let ai_classification = uni.ai_classification;
-        if (!ai_classification) {
+
+        // Only calculate if not already set (e.g. from shortlist) AND we have profile data
+        if (!ai_classification && profile) {
+            // Normalize GPA (Assuming 4.0 scale if < 5, else assume percentage/10)
+            let userGpa = 3.0; // Default
+            const gpaStr = profile.gpa ? profile.gpa.toString() : '';
+            const gpaVal = parseFloat(gpaStr.split('/')[0]);
+
+            if (!isNaN(gpaVal)) {
+                if (gpaVal <= 4.0) userGpa = gpaVal;
+                else if (gpaVal <= 10.0) userGpa = gpaVal * 0.4; // Convert 10 scale to 4
+                else userGpa = (gpaVal / 100) * 4.0; // Convert 100 scale to 4
+            }
+
+            // Simple Heuristic
+            // High GPA (3.8+) + High Acceptance (>60%) -> Safe
+            // Low GPA (<3.0) + Low Acceptance (<30%) -> Dream
+
+            const difficulty = 1 - acceptance_rate; // 0.9 (Hard) to 0.1 (Easy)
+            const studentScore = userGpa / 4.0; // 0.0 to 1.0
+
+            const gap = studentScore - difficulty;
+
+            if (gap > 0.2) ai_classification = 'Safe';
+            else if (gap < -0.1) ai_classification = 'Dream';
+            else ai_classification = 'Target';
+        } else if (!ai_classification) {
+            // Fallback if no profile
             if (acceptance_rate < 0.3) ai_classification = 'Dream';
             else if (acceptance_rate > 0.6) ai_classification = 'Safe';
             else ai_classification = 'Target';
         }
 
         // --- NEW: Mock AI Evaluation Data ---
+        // customize these based on profile if possible
         const fit_reasons = [
             "Strong match for your academic profile and budget.",
             "Excellent Computer Science department suitable for your goals.",
@@ -109,7 +137,7 @@ export const useUniversities = () => {
                 unis = await searchUniversities(countryToCheck);
             }
 
-            const augmented = unis.map(augmentUniversityData);
+            const augmented = unis.map(u => augmentUniversityData(u, profile));
             setUniversities(augmented);
         } catch (err: any) {
             console.error("Load Data Error", err);
@@ -133,18 +161,44 @@ export const useUniversities = () => {
 
     const handleShortlist = async (uniId: string, category: 'Dream' | 'Target' | 'Safe') => {
         try {
-            await addToShortlist(uniId, category);
+            let finalId = uniId;
+
+            // Handle Hipo (External) IDs
+            if (uniId.startsWith('hipo-')) {
+                const uni = universities.find(u => u.id === uniId);
+                if (!uni) throw new Error("University data not found for valid ID generation");
+
+                // Materialize the university in the DB to get a UUID
+                finalId = await import('../../../lib/api').then(m => m.ensureUniversityExists(uni));
+            }
+
+            await addToShortlist(finalId, category);
+            // Re-fetch shortlist
             const newList = await getShortlist();
             setShortlist(newList);
         } catch (err: any) {
+            console.error(err);
             alert('Could not shortlist: ' + err.message);
         }
     };
 
-    const handleRemove = async (id: string) => {
+    const handleRemove = async (universityId: string) => {
+        const itemToRemove = shortlist.find(item => item.university_id === universityId);
+
+        if (!itemToRemove) {
+            console.warn("Attempted to remove item not in local shortlist state", universityId);
+            // Fallback: If for some reason state is out of sync, we might try to refresh or just return
+            return;
+        }
+
         if (!confirm('Remove from shortlist?')) return;
+
         try {
-            await removeFromShortlist(id);
+            await removeFromShortlist(itemToRemove.id);
+            // Optimistic update
+            setShortlist(prev => prev.filter(item => item.id !== itemToRemove.id));
+
+            // Re-fetch to be safe (optional, but good for consistency)
             const newList = await getShortlist();
             setShortlist(newList);
         } catch (err) { console.error(err); }
@@ -152,7 +206,6 @@ export const useUniversities = () => {
 
     // --- NEW: Locking Logic ---
     const handleLock = async (shortlistId: string) => {
-        if (!confirm('Lock this university? This will unlock application guidance.')) return;
         try {
             await updateShortlistStatus(shortlistId, 'Locked');
             const newList = await getShortlist();
@@ -163,7 +216,6 @@ export const useUniversities = () => {
     };
 
     const handleUnlock = async (shortlistId: string) => {
-        if (!confirm('Unlock this university? You will lose access to specific guidance.')) return;
         try {
             await updateShortlistStatus(shortlistId, 'Shortlisted');
             const newList = await getShortlist();

@@ -27,7 +27,6 @@ const COMMON_STYLES = {
 };
 
 const COUNTRIES = ["All", "United States", "United Kingdom", "Canada", "Australia", "Germany", "India", "Singapore", "France"];
-const TYPES = ["All", "Public", "Private"];
 const INTAKES = ["All", "Fall 2025", "Spring 2026", "Summer 2026"];
 const GRADUATION = ["All", "Undergraduate", "Postgraduate", "PhD"];
 const BUDGETS = ["All", "< 20k", "20k - 40k", "> 40k"];
@@ -68,6 +67,9 @@ export const UniFilters = ({ filters, onChange }: UniFiltersProps) => {
             {/* Filters Grid */}
             <Grid container spacing={2}>
                 <Grid item xs={12} md={4}>
+                    <Typography variant="caption" color="#64748b" fontWeight={600} sx={{ mb: 0.5, display: 'block' }}>
+                        Search
+                    </Typography>
                     <TextField
                         fullWidth
                         placeholder="Search by name..."
@@ -85,6 +87,9 @@ export const UniFilters = ({ filters, onChange }: UniFiltersProps) => {
                 </Grid>
 
                 <Grid item xs={6} sm={6} md={2}>
+                    <Typography variant="caption" color="#64748b" fontWeight={600} sx={{ mb: 0.5, display: 'block' }}>
+                        Country
+                    </Typography>
                     <FormControl fullWidth>
                         <Select
                             value={filters.country}
@@ -98,6 +103,9 @@ export const UniFilters = ({ filters, onChange }: UniFiltersProps) => {
                 </Grid>
 
                 <Grid item xs={6} sm={4} md={1.5}>
+                    <Typography variant="caption" color="#64748b" fontWeight={600} sx={{ mb: 0.5, display: 'block' }}>
+                        Budget
+                    </Typography>
                     <FormControl fullWidth>
                         <Select
                             value={filters.budget}
@@ -105,27 +113,15 @@ export const UniFilters = ({ filters, onChange }: UniFiltersProps) => {
                             displayEmpty
                             sx={COMMON_STYLES}
                         >
-                            <MenuItem value="All" disabled><em>Budget</em></MenuItem>
                             {BUDGETS.map(b => <MenuItem key={b} value={b}>{b}</MenuItem>)}
                         </Select>
                     </FormControl>
                 </Grid>
 
                 <Grid item xs={6} sm={4} md={1.5}>
-                    <FormControl fullWidth>
-                        <Select
-                            value={filters.type}
-                            onChange={(e) => onChange('type', e.target.value)}
-                            displayEmpty
-                            sx={COMMON_STYLES}
-                        >
-                            <MenuItem value="All" disabled><em>Type</em></MenuItem>
-                            {TYPES.map(t => <MenuItem key={t} value={t}>{t}</MenuItem>)}
-                        </Select>
-                    </FormControl>
-                </Grid>
-
-                <Grid item xs={6} sm={4} md={1.5}>
+                    <Typography variant="caption" color="#64748b" fontWeight={600} sx={{ mb: 0.5, display: 'block' }}>
+                        Degree
+                    </Typography>
                     <FormControl fullWidth>
                         <Select
                             value={filters.graduation}
@@ -133,13 +129,15 @@ export const UniFilters = ({ filters, onChange }: UniFiltersProps) => {
                             displayEmpty
                             sx={COMMON_STYLES}
                         >
-                            <MenuItem value="All" disabled><em>Degree</em></MenuItem>
                             {GRADUATION.map(t => <MenuItem key={t} value={t}>{t}</MenuItem>)}
                         </Select>
                     </FormControl>
                 </Grid>
 
                 <Grid item xs={6} sm={4} md={1.5}>
+                    <Typography variant="caption" color="#64748b" fontWeight={600} sx={{ mb: 0.5, display: 'block' }}>
+                        Intake
+                    </Typography>
                     <FormControl fullWidth>
                         <Select
                             value={filters.intake}
@@ -147,7 +145,6 @@ export const UniFilters = ({ filters, onChange }: UniFiltersProps) => {
                             displayEmpty
                             sx={COMMON_STYLES}
                         >
-                            <MenuItem value="All" disabled><em>Intake</em></MenuItem>
                             {INTAKES.map(t => <MenuItem key={t} value={t}>{t}</MenuItem>)}
                         </Select>
                     </FormControl>
