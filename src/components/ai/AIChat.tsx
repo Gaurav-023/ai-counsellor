@@ -169,6 +169,24 @@ export const AIChat = () => {
                     setNotification({ message: "Could not understand profile updates.", type: 'error' });
                 }
             }
+            else if (action.type === 'set_filter') {
+                // Handling Filter Action from AI
+                const { setChatFilters } = await import('../../store/filterStore').then(m => m.useFilterStore.getState());
+
+                const updates: { country?: string; budget?: string; intake?: string } = {};
+
+                if (action.data.country) updates.country = action.data.country;
+                if (action.data.budget) updates.budget = action.data.budget;
+                if (action.data.intake) updates.intake = action.data.intake;
+
+                if (Object.keys(updates).length > 0) {
+                    console.log("AI Action: Setting Filters", updates);
+                    setChatFilters(updates);
+                    // Emit event to trigger re-fetch in useUniversities if needed
+                    events.emit();
+                    setNotification({ message: `Filters updated: ${Object.values(updates).join(', ')}`, type: 'success' });
+                }
+            }
 
             // Trigger global refresh so Dashboard updates immediately!
             events.emit();
@@ -185,6 +203,45 @@ export const AIChat = () => {
         const userText = inputValue;
         setInputValue(""); // Clear input early
         setIsLoading(true);
+
+        // --- Intent Detection for Filter Store ---
+        try {
+            const lowerText = userText.toLowerCase();
+            const { setChatFilters } = await import('../../store/filterStore').then(m => m.useFilterStore.getState());
+
+            // Detect Country
+            const countryMatch = lowerText.match(/(?:in|location|for|from) (india|united states|usa|uk|united kingdom|canada|australia|germany|ireland|new zealand|france|netherlands|sweden)/i);
+            let detectedCountry;
+            if (countryMatch) {
+                const raw = countryMatch[1].toLowerCase();
+                if (raw === 'usa' || raw === 'united states') detectedCountry = 'United States';
+                else if (raw === 'uk' || raw === 'united kingdom') detectedCountry = 'United Kingdom';
+                else detectedCountry = raw.charAt(0).toUpperCase() + raw.slice(1); // Title case simple names
+            }
+
+            // Detect Budget
+            // "under 20k", "less than 20000", "budget 20k"
+            const budgetMatch = lowerText.match(/(?:budget|cost|fee).{0,10}(?:under|less than|<).{0,5}(20|40|60)k?/i);
+            let detectedBudget;
+            if (budgetMatch) {
+                const limit = budgetMatch[1];
+                if (limit === '20') detectedBudget = 'under_20k';
+                else if (limit === '40') detectedBudget = '20k_40k'; // Rough approximation
+            }
+
+            if (detectedCountry || detectedBudget) {
+                console.log("Chat Intent Detected:", { detectedCountry, detectedBudget });
+                setChatFilters({
+                    country: detectedCountry,
+                    budget: detectedBudget
+                });
+
+                // Also trigger event to notify components if they aren't listening to store directly (though store should handle it)
+                events.emit();
+            }
+
+        } catch (err) { console.error("Intent Detection Error", err); }
+        // -----------------------------------------
 
         try {
             // Optimistically add user message

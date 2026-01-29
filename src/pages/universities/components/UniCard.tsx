@@ -32,6 +32,7 @@ interface UniCardProps {
     onShortlist: (id: string, category: 'Dream' | 'Target' | 'Safe') => void;
     onRemove: (id: string) => void;
     showEvaluation?: boolean;
+    shortlistCategory?: 'Dream' | 'Target' | 'Safe';
     // New props for locking functionality
     isLocked?: boolean;
     onLock?: (id: string) => void;
@@ -46,6 +47,7 @@ export const UniCard = ({
     onShortlist,
     onRemove,
     showEvaluation = false,
+    shortlistCategory,
     isLocked = false,
     onLock,
     onUnlock,
@@ -71,6 +73,9 @@ export const UniCard = ({
     };
 
     const badgeStyle = getBadgeColor(aiCategory);
+
+    // Determine user shortlist badge style
+    const userShortlistStyle = shortlistCategory ? getBadgeColor(shortlistCategory) : { bg: '#dcfce7', color: '#16a34a' };
 
     const handleShortlistClick = (event: React.MouseEvent<HTMLButtonElement>) => {
         setAnchorEl(event.currentTarget);
@@ -282,8 +287,8 @@ export const UniCard = ({
                                 onClick={() => onRemove(uni.id)}
                                 startIcon={<CheckmarkCircle01Icon size={18} />}
                                 sx={{
-                                    bgcolor: '#dcfce7',
-                                    color: '#16a34a',
+                                    bgcolor: userShortlistStyle.bg,
+                                    color: userShortlistStyle.color,
                                     borderRadius: 3,
                                     fontWeight: 700,
                                     textTransform: 'none',
@@ -291,7 +296,7 @@ export const UniCard = ({
                                     '&:hover': { bgcolor: '#fef2f2', color: '#ef4444' }
                                 }}
                             >
-                                Added
+                                {shortlistCategory || 'Added'}
                             </Button>
                         ) : (
                             <>

@@ -13,6 +13,7 @@ import DashboardLayout from './layouts/DashboardLayout';
 import UniversitiesPage from './pages/universities/UniversitiesPage';
 import ShortlistPage from './pages/shortlist/ShortlistPage';
 import ProfilePage from './pages/profile/ProfilePage';
+import ApplicationPage from './pages/application/ApplicationPage';
 
 function App() {
   return (
@@ -32,6 +33,7 @@ function App() {
               <Route path="/dashboard" element={<DashboardPage />} />
               <Route path="/universities" element={<UniversitiesPage />} />
               <Route path="/shortlist" element={<ShortlistPage />} />
+              <Route path="/application" element={<ApplicationPage />} />
               <Route path="/profile" element={<ProfilePage />} />
             </Route>
           </Route>

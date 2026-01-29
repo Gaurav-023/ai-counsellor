@@ -34,7 +34,7 @@ export const getStudentProfile = async (): Promise<any> => {
         .select('full_name')
         .eq('id', user.id)
         .single();
-    
+
     if (profileError) console.error('Error fetching basic profile:', profileError);
 
     // Fetch student details
@@ -88,7 +88,7 @@ export const ensureUniversityExists = async (uni: University): Promise<string> =
         .select('id')
         .eq('name', uni.name)
         .eq('country', uni.country)
-        .single();
+        .maybeSingle();
 
     if (existing) return existing.id;
 

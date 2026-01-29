@@ -47,7 +47,6 @@ export const UniFilters = ({ filters, onChange }: UniFiltersProps) => {
                 <Typography variant="subtitle2" color="#334155" fontWeight={600}>
                     {filters.country === 'All' &&
                         filters.budget === 'All' &&
-                        filters.type === 'All' &&
                         filters.graduation === 'All' &&
                         filters.intake === 'All' &&
                         !filters.search
@@ -58,7 +57,6 @@ export const UniFilters = ({ filters, onChange }: UniFiltersProps) => {
                     {filters.search && <>Search: "<strong>{filters.search}</strong>" </>}
                     {filters.country !== 'All' && <> | Country: <strong>{filters.country}</strong></>}
                     {filters.budget !== 'All' && <> | Budget: <strong>{filters.budget}</strong></>}
-                    {filters.type !== 'All' && <> | Type: <strong>{filters.type}</strong></>}
                     {filters.graduation !== 'All' && <> | Degree: <strong>{filters.graduation}</strong></>}
                     {filters.intake !== 'All' && <> | Intake: <strong>{filters.intake}</strong></>}
                 </Typography>

@@ -11,24 +11,26 @@ import {
     ListItemIcon,
     ListItemText,
     Stack,
-    Chip,
     Stepper,
     Step,
     StepLabel,
     IconButton,
     CircularProgress,
     Fade,
-    Grow
+    Grow,
+    LinearProgress
 } from '@mui/material';
 import {
     PencilEdit02Icon,
     CheckmarkCircle01Icon,
-    AlertCircleIcon,
     Delete02Icon,
     Mortarboard01Icon,
     Globe02Icon,
     Calendar03Icon,
-    Money03Icon
+    Money03Icon,
+    Award01Icon,
+    BookOpen01Icon,
+    Task01Icon
 } from 'hugeicons-react';
 import { supabase } from '../../lib/supabase';
 import { useNavigate } from 'react-router-dom';
@@ -47,7 +49,7 @@ const DashboardPage = () => {
     const navigate = useNavigate();
     const [profile, setProfile] = useState<any>(null);
     const [shortlist, setShortlist] = useState<ShortlistItem[]>([]);
-    const [dbTasks, setDbTasks] = useState<Task[]>([]); // Dynamic tasks from DB
+    const [dbTasks, setDbTasks] = useState<Task[]>([]);
     const [loading, setLoading] = useState(true);
 
     const fetchData = async () => {
@@ -61,7 +63,6 @@ const DashboardPage = () => {
             setProfile(data);
 
             try {
-                // Fetch Shortlist & Tasks parallel
                 const [list, tasks] = await Promise.all([getShortlist(), getTasks()]);
                 setShortlist(list);
                 setDbTasks(tasks);
@@ -72,8 +73,6 @@ const DashboardPage = () => {
 
     useEffect(() => {
         fetchData();
-        // Subscribe to global refresh events (triggered by AI Chat)
-        // Fix: Ensure cleanup returns void, not boolean
         const unsubscribe = events.subscribe(() => {
             console.log("Dashboard refreshing due to AI Action...");
             fetchData();
@@ -81,8 +80,7 @@ const DashboardPage = () => {
         return () => { unsubscribe(); };
     }, []);
 
-    // --- Logic Engines ---
-    // (Existing logic kept for Stage & Strength)
+    // --- Logic ---
     const getCurrentStage = (p: any, list: ShortlistItem[]) => {
         if (!p) return 0;
         if (!p.gpa || !p.intended_degree || !p.budget_range) return 0;
@@ -101,6 +99,7 @@ const DashboardPage = () => {
         if (gpa >= 3.5) academic = 'Strong';
         else if (gpa < 2.5) academic = 'Weak';
         else if (!p.gpa) academic = 'Weak';
+
         let exams = 'Not Started';
         if (p.exam_ielts_status === 'taken' || p.exam_gre_status === 'taken') {
             exams = 'Completed';
@@ -112,11 +111,11 @@ const DashboardPage = () => {
         } else if (p.exam_ielts_status === 'planned' || p.exam_gre_status === 'planned') {
             exams = 'In Progress';
         }
+
         let sop = p.sop_status === 'Ready' ? 'Ready' : (p.sop_status === 'Draft' ? 'Draft' : 'Not Started');
         return { academic, exams, sop };
     };
 
-    // 3. Logic: Combine Static Recommendations + Dynamic AI Tasks
     interface DashboardTask {
         id?: string;
         text: string;
@@ -127,154 +126,140 @@ const DashboardPage = () => {
 
     const getCombinedTasks = (p: any) => {
         const tasks: DashboardTask[] = [];
-
-        // Dynamic DB Tasks first (AI Generated)
         dbTasks.forEach(t => {
             tasks.push({
                 id: t.id,
                 text: t.text,
-                sub: 'Added by AI Counsellor',
+                sub: 'AI Recommendation',
                 checked: t.completed,
                 isDynamic: true
             });
         });
 
-        // Static Logic Tasks (Recommendations)
         if (!p?.gpa || !p?.education_level) {
             tasks.push({ text: 'Complete Profile Details', sub: 'Add GPA and Education Level', checked: false });
         }
-        // Removed English Test as per user request
-        // if (p?.exam_ielts_status !== 'taken') {
-        //     tasks.push({ text: 'Take English Proficiency Test', sub: 'IELTS or TOEFL required', checked: false });
-        // }
         if (p?.intended_degree === 'Masters' && p?.exam_gre_status !== 'taken') {
             tasks.push({ text: 'Take GRE Exam', sub: 'Required for many MS programs', checked: false });
         }
-        // Removed SOP as per user request
-        // if (p?.sop_status !== 'Ready') {
-        //     tasks.push({ text: 'Draft Statement of Purpose', sub: 'Write your SOP', checked: false });
-        // }
-
         return tasks;
     };
 
     const handleToggleTask = async (task: DashboardTask) => {
         if (task.isDynamic && task.id) {
-            // Optimistic update
             const newTasks = dbTasks.map(t => t.id === task.id ? { ...t, completed: !t.completed } : t);
             setDbTasks(newTasks);
             try {
-                // Import API function locally to avoid circular dependencies if any, or just used imported one
                 const { updateTaskStatus } = await import('../../lib/api');
                 await updateTaskStatus(task.id, !task.checked);
             } catch (err) {
                 console.error("Failed to update task", err);
-                // Revert on error
                 setDbTasks(dbTasks);
             }
         } else {
-            // Static task - redirect to profile to fix
             navigate('/profile');
         }
     };
 
-
-    if (loading) {
-        return <Box sx={{ p: 4 }}>Loading control center...</Box>;
-    }
-
-    const currentStage = getCurrentStage(profile, shortlist);
-    const strength = getProfileStrength(profile);
-    const todoList = getCombinedTasks(profile);
-
-    // Removed unused getStrengthChipColor helper
-
     const handleDeleteTask = async (task: DashboardTask) => {
         if (!task.id) return;
-        // Optimistic update
         const newTasks = dbTasks.filter(t => t.id !== task.id);
         setDbTasks(newTasks);
         try {
-            // Import API function locally
             const { deleteTask } = await import('../../lib/api');
             await deleteTask(task.id);
         } catch (err) {
             console.error("Failed to delete task", err);
-            // Revert (simplified re-fetch for now or state rollback)
             fetchData();
         }
     };
 
+    if (loading) return <Box sx={{ p: 4, display: 'flex', justifyContent: 'center' }}><CircularProgress sx={{ color: '#1e293b' }} /></Box>;
+
+    const currentStage = getCurrentStage(profile, shortlist);
+    const strength = getProfileStrength(profile);
+    const todoList = getCombinedTasks(profile);
+    const progress = todoList.length > 0 ? (todoList.filter(t => t.checked).length / todoList.length) * 100 : 0;
+
     return (
-        <Box sx={{ maxWidth: 1600, mx: 'auto', px: 2 }}>
-            {/* Header Section */}
+        <Box sx={{ maxWidth: 1440, mx: 'auto', px: { xs: 2, md: 4 }, py: 4 }}>
+
+            {/* 1. HERO SECTION */}
             <Fade in={true} timeout={800}>
-                <Box sx={{ mb: 5, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <Box sx={{ mb: 6, display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end' }}>
                     <Box>
-                        <Typography variant="h3" fontWeight="800" color="#1e293b" sx={{ letterSpacing: '-0.03em', mb: 1 }}>
-                            Hello, {profile?.full_name?.split(' ')[0] || 'Student'}
+                        <Stack direction="row" alignItems="center" spacing={1} sx={{ mb: 1 }}>
+                            <Award01Icon size={20} color="#6366f1" />
+                            <Typography variant="overline" fontWeight="700" color="#6366f1" sx={{ letterSpacing: '0.1em' }}>
+                                STUDENT DASHBOARD
+                            </Typography>
+                        </Stack>
+                        <Typography variant="h3" fontWeight="800" color="#0f172a" sx={{ letterSpacing: '-0.03em', mb: 1 }}>
+                            Welcome back, <span style={{ color: '#6366f1' }}>{profile?.full_name?.split(' ')[0] || 'Scholar'}</span>
                         </Typography>
-                        <Typography variant="body1" color="#64748b" sx={{ fontSize: '1.1rem', maxWidth: 500 }}>
-                            Your application journey is on track. Here's what needs your attention today.
+                        <Typography variant="body1" color="#64748b" sx={{ fontSize: '1.1rem', maxWidth: 600 }}>
+                            You're making great progress. Here's an overview of your application journey.
                         </Typography>
                     </Box>
-                    <Box sx={{ display: { xs: 'none', md: 'flex' }, alignItems: 'center', gap: 2, bgcolor: 'white', px: 2, py: 1, borderRadius: 4, boxShadow: '0 2px 10px rgba(0,0,0,0.03)' }}>
-                        <Typography variant="caption" fontWeight="700" color="#94a3b8" sx={{ textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                            Current Phase
+
+                    {/* Current Stage Pill */}
+                    <Box sx={{
+                        display: { xs: 'none', md: 'flex' },
+                        alignItems: 'center',
+                        gap: 1.5,
+                        bgcolor: 'white',
+                        px: 2.5,
+                        py: 1.5,
+                        borderRadius: 50,
+                        boxShadow: '0 4px 20px rgba(0,0,0,0.04)',
+                        border: '1px solid #f1f5f9'
+                    }}>
+                        <Box sx={{ width: 8, height: 8, borderRadius: '50%', bgcolor: '#22c55e', boxShadow: '0 0 0 4px rgba(34, 197, 94, 0.2)' }} />
+                        <Typography variant="subtitle2" fontWeight="700" color="#334155">
+                            {STAGES[currentStage]}
                         </Typography>
-                        <Chip
-                            label={STAGES[currentStage]}
-                            sx={{
-                                bgcolor: 'rgba(59, 130, 246, 0.1)',
-                                color: '#2563eb',
-                                fontWeight: 700,
-                                borderRadius: 2,
-                                px: 0.5,
-                                height: 32,
-                                fontSize: '0.85rem'
-                            }}
-                        />
                     </Box>
                 </Box>
             </Fade>
 
             <Grid container spacing={4}>
 
-                {/* LEFT COLUMN: Main Actions & Stats */}
+                {/* 2. MAIN STATS GRID */}
                 <Grid item xs={12} lg={8}>
-
-                    {/* Profile Snapshot Grid */}
                     <Fade in={true} timeout={1000}>
-                        <Grid container spacing={2} sx={{ mb: 5 }}>
+                        <Grid container spacing={2.5} sx={{ mb: 5 }}>
                             {[
-                                { label: 'Degree', value: profile?.intended_degree || 'TBD', icon: <Mortarboard01Icon size={20} color="#6366f1" />, bg: '#eef2ff' },
-                                { label: 'GPA', value: profile?.gpa || '-', icon: <AlertCircleIcon size={20} color="#f59e0b" />, bg: '#fffbeb' },
-                                { label: 'Budget', value: profile?.budget_range || '-', icon: <Money03Icon size={20} color="#10b981" />, bg: '#ecfdf5' },
-                                { label: 'Major', value: profile?.degree_major || '-', icon: <Calendar03Icon size={20} color="#ec4899" />, bg: '#fdf2f8' },
-                                { label: 'Target', value: profile?.preferred_countries?.[0] || 'Global', icon: <Globe02Icon size={20} color="#0ea5e9" />, bg: '#f0f9ff' },
+                                { label: 'Intended Degree', value: profile?.intended_degree || 'Not Set', icon: <Mortarboard01Icon size={22} color="#4f46e5" />, bg: '#eef2ff' },
+                                { label: 'Target GPA', value: profile?.gpa || 'TBD', icon: <BookOpen01Icon size={22} color="#0891b2" />, bg: '#ecfeff' },
+                                { label: 'Major', value: profile?.degree_major || 'Undecided', icon: <Calendar03Icon size={22} color="#ec4899" />, bg: '#fdf2f8' },
+                                { label: 'Budget Range', value: profile?.budget_range || 'TBD', icon: <Money03Icon size={22} color="#059669" />, bg: '#ecfdf5' },
+                                { label: 'Target Region', value: profile?.preferred_countries?.[0] || 'Global', icon: <Globe02Icon size={22} color="#db2777" />, bg: '#fdf2f8' },
                             ].map((stat, i) => (
-                                <Grid item xs={6} sm={4} md={2.4} key={i}>
+                                <Grid item xs={12} sm={i < 3 ? 4 : 6} key={i}>
                                     <Grow in={true} timeout={1000 + (i * 100)}>
                                         <Card sx={{
-                                            borderRadius: 5,
-                                            bgcolor: 'white',
-                                            boxShadow: '0 4px 20px rgba(0, 0, 0, 0.02)', // Softer shadow
-                                            border: '1px solid transparent',
+                                            borderRadius: 4,
                                             height: '100%',
-                                            transition: 'all 0.3s ease',
-                                            '&:hover': { transform: 'translateY(-4px)', boxShadow: '0 12px 24px rgba(0, 0, 0, 0.06)' }
+                                            border: '1px solid #f1f5f9',
+                                            boxShadow: '0 2px 10px rgba(0,0,0,0.02)',
+                                            transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                                            '&:hover': {
+                                                transform: 'translateY(-4px)',
+                                                boxShadow: '0 12px 24px rgba(0,0,0,0.06)',
+                                                borderColor: '#e2e8f0'
+                                            }
                                         }}>
-                                            <CardContent sx={{ p: 2.5, '&:last-child': { pb: 2.5 } }}>
+                                            <CardContent sx={{ p: 3 }}>
                                                 <Box sx={{
-                                                    width: 40, height: 40, mb: 2, borderRadius: 3, bgcolor: stat.bg,
+                                                    width: 44, height: 44, mb: 2, borderRadius: 3, bgcolor: stat.bg,
                                                     display: 'flex', alignItems: 'center', justifyContent: 'center'
                                                 }}>
                                                     {stat.icon}
                                                 </Box>
-                                                <Typography variant="caption" fontWeight="700" color="#94a3b8" sx={{ textTransform: 'uppercase', letterSpacing: '0.05em', display: 'block', mb: 0.5 }}>
+                                                <Typography variant="body2" color="#64748b" fontWeight="600" sx={{ mb: 0.5 }}>
                                                     {stat.label}
                                                 </Typography>
-                                                <Typography variant="body1" fontWeight="700" color="#1e293b" noWrap title={typeof stat.value === 'string' ? stat.value : ''}>
+                                                <Typography variant="h6" color="#0f172a" fontWeight="700" noWrap>
                                                     {stat.value}
                                                 </Typography>
                                             </CardContent>
@@ -285,208 +270,233 @@ const DashboardPage = () => {
                         </Grid>
                     </Fade>
 
-                    {/* Action Plan (Redesigned) */}
-                    <Fade in={true} timeout={1400}>
+                    {/* 3. ACTION PLAN (TASKS) */}
+                    <Fade in={true} timeout={1200}>
                         <Card sx={{
-                            borderRadius: 6, // Increased radius
-                            border: 'none',
-                            bgcolor: 'white',
-                            boxShadow: '0 4px 24px rgba(0, 0, 0, 0.03)', // Softer shadow
+                            borderRadius: 5,
+                            border: '1px solid #f1f5f9',
+                            boxShadow: '0 4px 20px rgba(0,0,0,0.03)',
                             overflow: 'visible'
                         }}>
-                            <CardContent sx={{ p: 0 }}>
-                                <Box sx={{ p: 5, display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #f8fafc' }}>
+                            <Box sx={{ p: 4, borderBottom: '1px solid #f8fafc', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                <Stack direction="row" alignItems="center" spacing={1.5}>
+                                    <Box sx={{ p: 1, borderRadius: 2, bgcolor: '#fff7ed', color: '#ea580c' }}>
+                                        <Task01Icon size={22} />
+                                    </Box>
                                     <Box>
-                                        <Typography variant="h5" fontWeight="800" color="#1e293b" sx={{ letterSpacing: '-0.02em', mb: 0.5 }}>Action Plan</Typography>
-                                        <Typography variant="body1" color="#64748b">
-                                            You have completed {todoList.filter(t => t.checked).length} out of {todoList.length} recommended tasks.
+                                        <Typography variant="h6" fontWeight="800" color="#1e293b">Action Plan</Typography>
+                                        <Typography variant="body2" color="#64748b" fontWeight="500">
+                                            {Math.round(progress)}% completed
                                         </Typography>
                                     </Box>
-                                    <Box sx={{ position: 'relative', display: 'inline-flex' }}>
-                                        <CircularProgress
-                                            variant="determinate"
-                                            value={100}
-                                            size={68}
-                                            thickness={3}
-                                            sx={{ color: '#f1f5f9', position: 'absolute' }}
-                                        />
-                                        <CircularProgress
-                                            variant="determinate"
-                                            value={todoList.length > 0 ? (todoList.filter(t => t.checked).length / todoList.length) * 100 : 0}
-                                            size={68}
-                                            thickness={3}
-                                            sx={{ color: '#f97316', strokeLinecap: 'round' }}
-                                        />
-                                        <Box sx={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                                            <Typography variant="body2" fontWeight="800" color="#1e293b">
-                                                {Math.round(todoList.length > 0 ? (todoList.filter(t => t.checked).length / todoList.length) * 100 : 0)}%
-                                            </Typography>
-                                        </Box>
+                                </Stack>
+                                <Box sx={{ position: 'relative', display: 'inline-flex' }}>
+                                    <CircularProgress
+                                        variant="determinate"
+                                        value={100}
+                                        size={50}
+                                        thickness={4}
+                                        sx={{ color: '#f1f5f9', position: 'absolute' }}
+                                    />
+                                    <CircularProgress
+                                        variant="determinate"
+                                        value={progress}
+                                        size={50}
+                                        thickness={4}
+                                        sx={{ color: '#f97316', strokeLinecap: 'round' }}
+                                    />
+                                    <Box sx={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                        <Typography variant="caption" fontWeight="800" color="#1e293b">
+                                            {Math.round(progress)}%
+                                        </Typography>
                                     </Box>
                                 </Box>
+                            </Box>
 
-                                <List sx={{ px: 0, py: 1 }}>
-                                    {todoList.map((task, idx) => (
-                                        <ListItem
-                                            key={idx}
-                                            disablePadding
-                                            secondaryAction={
-                                                task.isDynamic && (
-                                                    <IconButton
-                                                        edge="end"
-                                                        onClick={(e) => { e.stopPropagation(); handleDeleteTask(task); }}
-                                                        sx={{
-                                                            opacity: 1, // Always visible
-                                                            transition: 'all 0.2s',
-                                                            color: '#cbd5e1', // Neutral default
-                                                            '&:hover': { color: '#ef4444', bgcolor: '#fee2e2', transform: 'scale(1.1)' }
-                                                        }}
-                                                    >
-                                                        <Delete02Icon size={20} />
-                                                    </IconButton>
-                                                )
-                                            }
+                            <List sx={{ p: 1 }}>
+                                {todoList.map((task, idx) => (
+                                    <ListItem
+                                        key={idx}
+                                        disablePadding
+                                        secondaryAction={
+                                            task.isDynamic && (
+                                                <IconButton
+                                                    edge="end"
+                                                    onClick={(e) => { e.stopPropagation(); handleDeleteTask(task); }}
+                                                    sx={{
+                                                        color: '#e2e8f0',
+                                                        transition: 'all 0.2s',
+                                                        '&:hover': { color: '#ef4444', bgcolor: '#fee2e2' }
+                                                    }}
+                                                >
+                                                    <Delete02Icon size={18} />
+                                                </IconButton>
+                                            )
+                                        }
+                                        sx={{ mb: 1 }}
+                                    >
+                                        <ListItemButton
+                                            onClick={() => handleToggleTask(task)}
                                             sx={{
-                                                borderBottom: '1px solid #f8fafc',
+                                                borderRadius: 3,
+                                                py: 2,
+                                                px: 3,
                                                 transition: 'all 0.2s',
-                                                '&:hover': {
-                                                    bgcolor: '#fafafa',
-                                                }
+                                                '&:hover': { bgcolor: '#f8fafc', transform: 'translateX(4px)' }
                                             }}
                                         >
-                                            <ListItemButton
-                                                onClick={() => handleToggleTask(task)}
-                                                disableRipple
-                                                sx={{ py: 3, px: 5 }}
-                                            >
-                                                <ListItemIcon sx={{ minWidth: 56 }}>
-                                                    {task.checked ? (
-                                                        <Box sx={{
-                                                            width: 28, height: 28, borderRadius: '50%',
-                                                            bgcolor: '#dcfce7', color: '#16a34a',
-                                                            display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                                        }}>
-                                                            <CheckmarkCircle01Icon size={18} />
-                                                        </Box>
-                                                    ) : (
-                                                        <Box sx={{
-                                                            width: 28, height: 28, borderRadius: '50%',
-                                                            border: '2px solid #e2e8f0',
-                                                            transition: 'all 0.2s',
-                                                            bgcolor: '#fff',
-                                                            '&:hover': { borderColor: '#94a3b8' }
-                                                        }} />
-                                                    )}
-                                                </ListItemIcon>
-                                                <ListItemText
-                                                    primary={
-                                                        <Typography variant="body1" fontWeight={600} sx={{
-                                                            textDecoration: task.checked ? 'line-through' : 'none',
-                                                            color: task.checked ? '#94a3b8' : '#334155',
-                                                            fontSize: '1.05rem',
-                                                            mb: 0.5
-                                                        }}>
-                                                            {task.text}
-                                                        </Typography>
-                                                    }
-                                                    secondary={
-                                                        <Typography variant="body2" color="#94a3b8" fontWeight="500">
-                                                            {task.sub}
-                                                        </Typography>
-                                                    }
-                                                />
-                                            </ListItemButton>
-                                        </ListItem>
-                                    ))}
-                                </List>
+                                            <ListItemIcon sx={{ minWidth: 48 }}>
+                                                {task.checked ? (
+                                                    <Box sx={{
+                                                        width: 24, height: 24, borderRadius: '50%',
+                                                        bgcolor: '#6366f1', color: 'white',
+                                                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                                    }}>
+                                                        <CheckmarkCircle01Icon size={16} />
+                                                    </Box>
+                                                ) : (
+                                                    <Box sx={{
+                                                        width: 24, height: 24, borderRadius: '50%',
+                                                        border: '2px solid #cbd5e1',
+                                                        bgcolor: 'transparent'
+                                                    }} />
+                                                )}
+                                            </ListItemIcon>
+                                            <ListItemText
+                                                primary={
+                                                    <Typography variant="body1" fontWeight={600} sx={{
+                                                        textDecoration: task.checked ? 'line-through' : 'none',
+                                                        color: task.checked ? '#94a3b8' : '#334155',
+                                                        transition: 'color 0.2s'
+                                                    }}>
+                                                        {task.text}
+                                                    </Typography>
+                                                }
+                                                secondary={
+                                                    <Typography variant="caption" color="#94a3b8" fontWeight="500">
+                                                        {task.sub}
+                                                    </Typography>
+                                                }
+                                            />
+                                        </ListItemButton>
+                                    </ListItem>
+                                ))}
                                 {todoList.length === 0 && (
-                                    <Box sx={{ p: 8, textAlign: 'center' }}>
-                                        <Typography color="#94a3b8" fontWeight="500" fontSize="1.1rem">All caught up. Good job!</Typography>
+                                    <Box sx={{ p: 6, textAlign: 'center' }}>
+                                        <Typography color="#94a3b8" fontWeight="500">You're all caught up!</Typography>
                                     </Box>
                                 )}
-                            </CardContent>
+                            </List>
                         </Card>
                     </Fade>
                 </Grid>
 
-                {/* RIGHT COLUMN: Profile Strength & Progress */}
+                {/* 4. RIGHT SIDEBAR (SUMMARY) */}
                 <Grid item xs={12} lg={4}>
-                    <Fade in={true} timeout={1600}>
+                    <Fade in={true} timeout={1400}>
                         <Stack spacing={4}>
 
-                            {/* Application Readiness (Light Theme) */}
+                            {/* Readiness Card */}
                             <Card sx={{
                                 borderRadius: 5,
                                 border: 'none',
-                                boxShadow: '0 4px 24px rgba(0, 0, 0, 0.05)',
-                                bgcolor: 'white',
-                                color: '#0f172a'
+                                boxShadow: '0 4px 20px rgba(0,0,0,0.03)',
+                                bgcolor: 'white'
                             }}>
                                 <CardContent sx={{ p: 4 }}>
-                                    <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 4, alignItems: 'center' }}>
-                                        <Typography variant="h6" fontWeight="800" letterSpacing="-0.01em">Readiness Score</Typography>
-                                        <IconButton size="small" sx={{ bgcolor: '#f8fafc', '&:hover': { bgcolor: '#f1f5f9' } }} onClick={() => navigate('/profile')}>
-                                            <PencilEdit02Icon size={18} color="#64748b" />
+                                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 4 }}>
+                                        <Typography variant="h6" fontWeight="800" color="#1e293b">Readiness Score</Typography>
+                                        <IconButton size="small" onClick={() => navigate('/profile')}>
+                                            <PencilEdit02Icon size={18} color="#94a3b8" />
                                         </IconButton>
                                     </Box>
 
                                     <Stack spacing={3}>
                                         {[
-                                            { label: 'Academics', val: strength.academic },
-                                            { label: 'Test Scores', val: strength.exams },
-                                            { label: 'SOP', val: strength.sop },
+                                            { label: 'Academic Profile', val: strength.academic },
+                                            { label: 'Test Prep', val: strength.exams },
+                                            { label: 'Documents', val: strength.sop },
                                         ].map((s, i) => (
                                             <Box key={i}>
-                                                <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1.5 }}>
+                                                <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
                                                     <Typography variant="body2" fontWeight="600" color="#64748b">{s.label}</Typography>
-                                                    <Typography variant="body2" fontWeight="700"
-                                                        color={s.val === 'Strong' || s.val === 'Completed' || s.val === 'Ready' ? '#16a34a' : '#eab308'}>
-                                                        {s.val}
+                                                    <Typography variant="caption" fontWeight="700"
+                                                        sx={{
+                                                            px: 1, py: 0.5, borderRadius: 1,
+                                                            bgcolor: s.val === 'Strong' || s.val === 'Completed' || s.val === 'Ready' ? '#dcfce7' : '#fef3c7',
+                                                            color: s.val === 'Strong' || s.val === 'Completed' || s.val === 'Ready' ? '#166534' : '#b45309'
+                                                        }}>
+                                                        {s.val.toUpperCase()}
                                                     </Typography>
                                                 </Box>
-                                                <Box sx={{ height: 8, bgcolor: '#f1f5f9', borderRadius: 5, overflow: 'hidden' }}>
-                                                    <Box sx={{
-                                                        height: '100%',
-                                                        width: s.val === 'Strong' || s.val === 'Completed' || s.val === 'Ready' ? '100%' : (s.val === 'Average' || s.val === 'In Progress' ? '50%' : '15%'),
-                                                        bgcolor: s.val === 'Strong' || s.val === 'Completed' || s.val === 'Ready' ? '#22c55e' : '#facc15',
-                                                        borderRadius: 5,
-                                                        transition: 'width 1s ease-in-out'
-                                                    }} />
-                                                </Box>
+                                                <LinearProgress
+                                                    variant="determinate"
+                                                    value={
+                                                        s.val === 'Strong' || s.val === 'Completed' || s.val === 'Ready' ? 100 :
+                                                            (s.val === 'Average' || s.val === 'In Progress' ? 50 : 15)
+                                                    }
+                                                    sx={{
+                                                        height: 6,
+                                                        borderRadius: 3,
+                                                        bgcolor: '#f1f5f9',
+                                                        '& .MuiLinearProgress-bar': {
+                                                            borderRadius: 3,
+                                                            bgcolor: s.val === 'Strong' || s.val === 'Completed' || s.val === 'Ready' ? '#22c55e' : '#f59e0b'
+                                                        }
+                                                    }}
+                                                />
                                             </Box>
                                         ))}
                                     </Stack>
-
-                                    <Box sx={{ mt: 4, p: 2.5, bgcolor: '#f0f9ff', borderRadius: 3, display: 'flex', gap: 2, alignItems: 'start' }}>
-                                        <AlertCircleIcon size={22} color="#0ea5e9" style={{ marginTop: 2 }} />
-                                        <Typography variant="body2" fontWeight="500" color="#0c4a6e" sx={{ lineHeight: 1.6 }}>
-                                            {strength.academic === 'Strong'
-                                                ? "Your academics are strong. Focus on maximizing your test scores to unlock top universities."
-                                                : "Boost your admission chances by highlighting personal projects in your Statement of Purpose."}
-                                        </Typography>
-                                    </Box>
                                 </CardContent>
                             </Card>
 
-                            {/* Progress Stepper */}
-                            <Card sx={{ borderRadius: 5, border: 'none', boxShadow: 'none', bgcolor: 'transparent' }}>
-                                <CardContent sx={{ p: 0 }}>
-                                    <Typography variant="h6" fontWeight="800" color="#1e293b" sx={{ mb: 3, px: 1 }}>Your Journey</Typography>
-                                    <Stepper activeStep={currentStage} orientation="vertical" sx={{
-                                        '& .MuiStepConnector-line': { borderColor: '#e2e8f0', minHeight: 32 },
+                            {/* Journey Stepper */}
+                            <Box sx={{ px: 2 }}>
+                                <Typography variant="h6" fontWeight="800" color="#1e293b" sx={{ mb: 3 }}>
+                                    Your Journey
+                                </Typography>
+                                <Stepper activeStep={currentStage} orientation="vertical"
+                                    sx={{
+                                        '& .MuiStepConnector-root': { ml: 1.5 },
+                                        '& .MuiStepConnector-line': {
+                                            borderColor: '#cbd5e1',
+                                            borderLeftWidth: 2,
+                                            minHeight: 32
+                                        },
+                                        '& .MuiStepContent-root': {
+                                            ml: 1.5,
+                                            pl: 3,
+                                            borderLeft: '2px solid #cbd5e1'
+                                        },
                                         '& .MuiStepLabel-iconContainer': { paddingRight: 2 },
-                                        '& .MuiStepLabel-label': { fontWeight: 600, color: '#94a3b8', fontSize: '0.95rem' },
-                                        '& .MuiStepLabel-label.Mui-active': { color: '#0f172a', fontWeight: 700 },
-                                        '& .MuiStepLabel-label.Mui-completed': { color: '#10b981' },
-                                    }}>
-                                        {STAGES.map((label) => (
-                                            <Step key={label}>
-                                                <StepLabel>{label}</StepLabel>
-                                            </Step>
-                                        ))}
-                                    </Stepper>
-                                </CardContent>
-                            </Card>
+                                    }}
+                                >
+                                    {STAGES.map((label, index) => (
+                                        <Step key={label} expanded>
+                                            <StepLabel StepIconComponent={() => (
+                                                <Box sx={{
+                                                    width: 24, height: 24, borderRadius: '50%',
+                                                    bgcolor: index <= currentStage ? '#6366f1' : 'white',
+                                                    border: '2px solid',
+                                                    borderColor: index <= currentStage ? '#6366f1' : '#cbd5e1',
+                                                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                                    zIndex: 1,
+                                                    boxShadow: index === currentStage ? '0 0 0 4px rgba(99, 102, 241, 0.2)' : 'none'
+                                                }}>
+                                                    {index < currentStage && <CheckmarkCircle01Icon size={14} color="white" />}
+                                                    {index === currentStage && <Box sx={{ width: 8, height: 8, borderRadius: '50%', bgcolor: 'white' }} />}
+                                                </Box>
+                                            )}>
+                                                <Typography variant="body1" fontWeight={index === currentStage ? 700 : 600}
+                                                    color={index <= currentStage ? '#1e293b' : '#94a3b8'}>
+                                                    {label}
+                                                </Typography>
+                                            </StepLabel>
+                                        </Step>
+                                    ))}
+                                </Stepper>
+                            </Box>
 
                         </Stack>
                     </Fade>

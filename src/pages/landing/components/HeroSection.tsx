@@ -86,37 +86,34 @@ const HeroSection = () => {
                             </motion.div>
 
                             <motion.div variants={fadeInUp}>
-                                <Typography variant="h1" gutterBottom sx={{
-                                    fontSize: { xs: '2.5rem', md: '4.5rem' },
-                                    lineHeight: 1.1,
-                                    mb: 3,
-                                    color: 'text.primary',
-                                    fontFamily: '"Inter", sans-serif',
-                                    fontWeight: 800
-                                }}>
+                                <Typography
+                                    variant="h1"
+                                    gutterBottom
+                                    sx={{
+                                        fontSize: { xs: '2.5rem', md: '4.5rem' },
+                                        lineHeight: 1.1,
+                                        mb: 3,
+                                        color: 'text.primary',
+                                        fontFamily: '"Inter", sans-serif',
+                                        fontWeight: 800,
+                                    }}
+                                >
                                     Plan your study-abroad <br />
-                                    <Box component="span" sx={{
-                                        fontFamily: '"Playfair Display", "Times New Roman", serif',
-                                        fontStyle: 'italic',
-                                        fontWeight: 400,
-                                        color: 'primary.main',
-                                        position: 'relative',
-                                        display: 'inline-block',
-                                        '&::after': {
-                                            content: '""',
-                                            position: 'absolute',
-                                            bottom: 10,
-                                            left: 0,
-                                            width: '100%',
-                                            height: '2px',
-                                            bgcolor: 'primary.main',
-                                            opacity: 0.3
-                                        }
-                                    }}>
+                                    <Box
+                                        component="span"
+                                        sx={{
+                                            fontFamily: '"Playfair Display", "Times New Roman", serif',
+                                            fontStyle: 'italic',
+                                            fontWeight: 400,
+                                            color: 'primary.main',
+                                            display: 'inline-block',
+                                        }}
+                                    >
                                         journey with AI.
                                     </Box>
                                 </Typography>
                             </motion.div>
+
 
                             <motion.div variants={fadeInUp}>
                                 <Typography variant="h6" color="text.secondary" paragraph sx={{ mb: 5, maxWidth: '650px', mx: 'auto', lineHeight: 1.6 }}>

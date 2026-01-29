@@ -1,15 +1,30 @@
 import { useState, useEffect } from 'react';
 import { getUniversities, getShortlist, addToShortlist, removeFromShortlist, updateShortlistStatus, getStudentProfile, searchUniversities } from '../../../lib/api';
 import type { University, ShortlistItem } from '../../../lib/types';
+import { events } from '../../../lib/events';
 
 export interface FilterState {
     search: string;
     country: string;
-    type: string;
     intake: string;
-    graduation: string;
+    graduation: string; // Restoring graduation
     budget: string;
 }
+
+const mapBudgetToFilter = (budgetRange?: string) => {
+    if (!budgetRange) return 'All';
+    const b = budgetRange.toLowerCase().trim();
+    if (b.includes('under') && b.includes('20')) return '< 20k';
+    if (b === 'under_20k') return '< 20k';
+    if (b === '< 20k') return '< 20k';
+
+    if (b.includes('20') && b.includes('40')) return '20k - 40k';
+    if (b === '20k_40k') return '20k - 40k';
+
+    if (b.includes('40') || b.includes('60') || b === '60k_plus') return '> 40k';
+
+    return 'All';
+};
 
 export const useUniversities = () => {
     const [universities, setUniversities] = useState<University[]>([]);
@@ -20,7 +35,6 @@ export const useUniversities = () => {
     const [filters, setFilters] = useState<FilterState>({
         search: '',
         country: 'All',
-        type: 'All',
         intake: 'All',
         graduation: 'All',
         budget: 'All'
@@ -57,6 +71,7 @@ export const useUniversities = () => {
         if (!ai_classification && profile) {
             // Normalize GPA (Assuming 4.0 scale if < 5, else assume percentage/10)
             let userGpa = 3.0; // Default
+            // Check if profile.gpa exists before calling toString to prevent "undefined is not an object" error
             const gpaStr = profile.gpa ? profile.gpa.toString() : '';
             const gpaVal = parseFloat(gpaStr.split('/')[0]);
 
@@ -115,33 +130,101 @@ export const useUniversities = () => {
             risks,
             cost_range: tuition_fee > 45000 ? 'High' : tuition_fee > 25000 ? 'Medium' : 'Low'
         };
+        // --- TYPE & INTAKE ALIGNMENT ---
+        let tags = uni.tags ? [...uni.tags] : [];
+
+        // Ensure Degree Type matches profile if not already specific
+        // Determine intended degree type from profile
+        const degreeType = profile?.intended_degree?.toLowerCase().includes('master') ||
+            profile?.intended_degree?.toLowerCase().includes('phd') ||
+            profile?.intended_degree?.toLowerCase().includes('mba')
+            ? 'Postgraduate'
+            : 'Undergraduate';
+
+        // Add the tag if not present
+        if (!tags.includes('Undergraduate') && !tags.includes('Postgraduate')) {
+            tags.push(degreeType);
+        }
+
+        // Intake: Prefer Fall as requested, or randomize appropriately
+        // We don't have a specific field for intake in University type yet, but we can simulate it in fit_reason or add it if needed. 
+        // For now, let's assume valid intake is mostly Fall for international students.
+
+        return {
+            ...uni,
+            ranking,
+            acceptance_rate,
+            tuition_fee,
+            ai_classification,
+            fit_reason,
+            risks,
+            tags,
+            cost_range: tuition_fee > 45000 ? 'High' : tuition_fee > 25000 ? 'Medium' : 'Low'
+        };
     };
 
     const loadData = async (countryOverride?: string) => {
         try {
             setLoading(true);
+
+            // 1. Get Dependencies
             const [profile, list] = await Promise.all([getStudentProfile(), getShortlist()]);
             setShortlist(list);
 
-            let unis: University[] = [];
-            const countryToCheck = countryOverride || filters.country;
+            // 2. Check Global Store Overrides (Chat Intent) - ALWAYS CHECK THIS FIRST
+            const { chatFilters } = await import('../../../store/filterStore').then(m => m.useFilterStore.getState());
 
-            if (countryToCheck === 'All') {
-                unis = await getUniversities();
-                if (unis.length === 0 && profile?.preferred_countries?.[0]) {
-                    const pref = profile.preferred_countries[0];
-                    setFilters(prev => ({ ...prev, country: pref }));
-                    unis = await searchUniversities(pref);
+            // Calculate Effective Filters
+            let effectiveFilters = { ...filters };
+
+            // Apply Country Override from Arg or Chat
+            if (chatFilters.country) {
+                effectiveFilters.country = chatFilters.country;
+            } else if (countryOverride) {
+                effectiveFilters.country = countryOverride;
+            }
+
+            // Apply Chat Filters
+            if (chatFilters.budget) effectiveFilters.budget = mapBudgetToFilter(chatFilters.budget);
+            if (chatFilters.intake) effectiveFilters.intake = chatFilters.intake;
+
+            // Apply Profile Defaults (Only if no Chat/Manual override and in 'All' state)
+            const isDefaultState = filters.country === 'All' && filters.budget === 'All' && !chatFilters.country;
+
+            if (isDefaultState && profile) {
+                if (profile.preferred_countries?.[0]) {
+                    effectiveFilters.country = profile.preferred_countries[0];
                 }
+                if (profile.budget_range && effectiveFilters.budget === 'All') {
+                    effectiveFilters.budget = mapBudgetToFilter(profile.budget_range);
+                }
+            }
+
+            // Update State if Changed
+            const hasChanged =
+                filters.country !== effectiveFilters.country ||
+                filters.budget !== effectiveFilters.budget ||
+                filters.intake !== effectiveFilters.intake;
+
+            if (hasChanged) {
+                setFilters(effectiveFilters);
+            }
+
+            // 3. Fetch Data
+            let unis: University[] = [];
+            const countryToFetch = effectiveFilters.country;
+
+            if (countryToFetch === 'All') {
+                unis = await getUniversities();
             } else {
-                unis = await searchUniversities(countryToCheck);
+                unis = await searchUniversities(countryToFetch);
             }
 
             const augmented = unis.map(u => augmentUniversityData(u, profile));
             setUniversities(augmented);
+
         } catch (err: any) {
             console.error("Load Data Error", err);
-            // setError(err.message || 'Failed to load data'); // Suppress for smoother demo
         } finally {
             setLoading(false);
         }
@@ -149,11 +232,28 @@ export const useUniversities = () => {
 
     useEffect(() => {
         loadData();
+
+        // Listen for global events (triggered by Chat Intent)
+        const unsubscribe = events.subscribe(() => {
+            console.log("Global Event Received in usageUniversities: Reloading Data with potential new filters");
+            loadData(); // Re-run load data which checks the store
+        });
+
+        return () => { unsubscribe(); };
     }, []);
 
-    const handleFilterChange = (key: keyof FilterState, value: string) => {
+    const handleFilterChange = async (key: keyof FilterState, value: string) => {
         setFilters(prev => ({ ...prev, [key]: value }));
         setPage(1);
+
+        // SYNC: Update global store so it doesn't override manual selection on next reload
+        if (key === 'country' || key === 'budget' || key === 'intake') {
+            const { useFilterStore } = await import('../../../store/filterStore');
+            const storeUpdate: any = {};
+            storeUpdate[key] = value === 'All' ? null : value;
+            useFilterStore.getState().setChatFilters(storeUpdate);
+        }
+
         if (key === 'country') {
             loadData(value);
         }
@@ -231,7 +331,8 @@ export const useUniversities = () => {
         const matchesSearch = u.name.toLowerCase().includes(query) ||
             u.location.toLowerCase().includes(query);
 
-        const matchesType = filters.type === 'All' ? true : (u.tags?.includes(filters.type) ?? true);
+        // Degree/Graduation Filter
+        const matchesGraduation = filters.graduation === 'All' ? true : (u.tags?.includes(filters.graduation) ?? true);
 
         // Budget Filter
         let matchesBudget = true;
@@ -244,7 +345,7 @@ export const useUniversities = () => {
             }
         }
 
-        return matchesSearch && matchesType && matchesBudget;
+        return matchesSearch && matchesGraduation && matchesBudget;
     });
 
     const paginatedUniversities = filteredUniversities.slice(

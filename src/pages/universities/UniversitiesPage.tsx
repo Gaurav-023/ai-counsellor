@@ -57,12 +57,22 @@ const UniversitiesPage = () => {
                 <>
                     <Grid container spacing={3} sx={{ mb: 6 }}>
                         {universities.map(uni => {
-                            const isShortlisted = shortlist.some(s => s.university_id === uni.id);
+                            const shortlistItem = shortlist.find(s => {
+                                if (s.university_id === uni.id) return true;
+                                if (uni.id.toString().startsWith('hipo-') && s.university) {
+                                    return s.university.name === uni.name && s.university.country === uni.country;
+                                }
+                                return false;
+                            });
+
+                            const isShortlisted = !!shortlistItem;
+
                             return (
                                 <Grid item xs={12} md={6} lg={4} xl={4} key={uni.id}>
                                     <UniCard
                                         uni={uni}
                                         isShortlisted={isShortlisted}
+                                        shortlistCategory={shortlistItem?.category}
                                         onShortlist={handleShortlist}
                                         onRemove={handleRemove}
                                     />

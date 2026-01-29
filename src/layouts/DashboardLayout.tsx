@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Box, Drawer, List, ListItem, ListItemButton, ListItemIcon, ListItemText, Button, Divider, IconButton, useTheme, useMediaQuery, AppBar, Toolbar, Avatar, Typography } from '@mui/material';
 import { Outlet, useNavigate, useLocation } from 'react-router-dom';
-import { Home01Icon, UniversityIcon, BookOpen01Icon, UserIcon, Settings01Icon, Logout01Icon, Menu01Icon } from 'hugeicons-react';
+import { Home01Icon, UniversityIcon, BookOpen01Icon, UserIcon, Settings01Icon, Logout01Icon, Menu01Icon, File01Icon } from 'hugeicons-react';
 import { supabase } from '../lib/supabase';
 import { AIChat } from '../components/ai/AIChat';
 
@@ -35,7 +35,7 @@ const DashboardLayout = () => {
         { text: 'Dashboard', icon: <Home01Icon size={24} />, path: '/dashboard' },
         { text: 'Universities', icon: <UniversityIcon size={24} />, path: '/universities' },
         { text: 'Shortlist', icon: <BookOpen01Icon size={24} />, path: '/shortlist' },
-        // { text: 'Applications', icon: <BookOpen01Icon size={24} />, path: '/applications' }, // TODO: Implement
+        { text: 'Applications', icon: <File01Icon size={24} />, path: '/application' },
         { text: 'Your Profile', icon: <UserIcon size={24} />, path: '/profile' },
         { text: 'Settings', icon: <Settings01Icon size={24} />, path: '/settings' },
     ];
