@@ -25,12 +25,7 @@ import { updateStudentProfile } from '../../lib/api';
 import { events } from '../../lib/events';
 
 // --- Constants (Matched with Onboarding) ---
-const budgetRanges = [
-    { value: 'under_20k', label: 'Under $20,000' },
-    { value: '20k_40k', label: '$20,000 - $40,000' },
-    { value: '40k_60k', label: '$40,000 - $60,000' },
-    { value: '60k_plus', label: '$60,000+' },
-];
+
 
 const fundingSources = [
     { value: 'self', label: 'Self Funded / Family' },
@@ -375,18 +370,12 @@ const ProfilePage = () => {
                                     <Coins01Icon size={16} /> Budget & Funding
                                 </Typography>
                                 <TextField
-                                    select fullWidth label="Budget Range"
+                                    fullWidth label="Budget Range"
+                                    placeholder="e.g. $25k or Flexible"
                                     value={formData.budget_range}
                                     onChange={(e) => handleChange('budget_range', e.target.value)}
                                     sx={{ mb: 2 }}
-                                >
-                                    {budgetRanges.map((option) => (
-                                        <MenuItem key={option.value} value={option.value}>
-                                            {option.label}
-                                        </MenuItem>
-                                    ))}
-                                </TextField>
-
+                                />
                                 <TextField
                                     select fullWidth label="Funding Source"
                                     value={formData.funding_source}

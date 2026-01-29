@@ -284,7 +284,7 @@ const DashboardPage = () => {
                                         <Task01Icon size={22} />
                                     </Box>
                                     <Box>
-                                        <Typography variant="h6" fontWeight="800" color="#1e293b">Action Plan</Typography>
+                                        <Typography variant="h6" fontWeight="800" color="#1e293b">To-Do Tasks</Typography>
                                         <Typography variant="body2" color="#64748b" fontWeight="500">
                                             {Math.round(progress)}% completed
                                         </Typography>

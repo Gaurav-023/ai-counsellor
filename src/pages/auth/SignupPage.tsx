@@ -84,13 +84,13 @@ const SignupPage = () => {
             // However, Supabase might require email confirmation unless disabled.
             // If session exists, user is logged in.
             if (data.session) {
-                navigate('/onboarding');
+                navigate('/onboarding-method');
             } else {
                 // If email confirmation is enabled and required (which user said is disabled, but just in case)
                 setError("Please check your email for confirmation link if required.");
                 // Or navigate to a 'check email' page.
                 // Given user instruction "immediate redirect", assuming session is active.
-                navigate('/onboarding');
+                navigate('/onboarding-method');
             }
         } catch (err: any) {
             setError(err.message);

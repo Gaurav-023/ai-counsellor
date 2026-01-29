@@ -103,7 +103,7 @@ const OnboardingLayout = ({ children, currentStep, steps }: OnboardingLayoutProp
         >
             <Box
                 component={Link}
-                to="/"
+                to="/onboarding-method"
                 sx={{
                     position: 'absolute',
                     top: 24,

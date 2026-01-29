@@ -85,7 +85,7 @@ const LoginPage = () => {
                 if (profile?.is_onboarding_complete) {
                     navigate('/dashboard'); // Go to dashboard if complete
                 } else {
-                    navigate('/onboarding'); // Go to onboarding if incomplete
+                    navigate('/onboarding-method'); // Go to method selection if incomplete
                 }
             } else {
                 navigate('/dashboard');

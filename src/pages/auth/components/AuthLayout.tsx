@@ -5,9 +5,10 @@ import { Link as RouterLink } from 'react-router-dom';
 
 interface AuthLayoutProps {
     children: React.ReactNode;
+    maxWidth?: 'xs' | 'sm' | 'md' | 'lg' | 'xl';
 }
 
-const AuthLayout = ({ children }: AuthLayoutProps) => {
+const AuthLayout = ({ children, maxWidth = 'xs' }: AuthLayoutProps) => {
 
     return (
         <Box
@@ -62,7 +63,7 @@ const AuthLayout = ({ children }: AuthLayoutProps) => {
                 <Typography variant="subtitle2" fontWeight="medium">Back</Typography>
             </Box>
 
-            <Container maxWidth="xs" sx={{ position: 'relative', zIndex: 1 }}>
+            <Container maxWidth={maxWidth} sx={{ position: 'relative', zIndex: 1 }}>
                 <motion.div
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}

@@ -24,12 +24,7 @@ interface StepProps {
     onBack: () => void;
 }
 
-const budgetRanges = [
-    { value: 'under_20k', label: 'Under $20,000' },
-    { value: '20k_40k', label: '$20,000 - $40,000' },
-    { value: '40k_60k', label: '$40,000 - $60,000' },
-    { value: '60k_plus', label: '$60,000+' },
-];
+
 
 const fundingSources = [
     { value: 'self', label: 'Self Funded / Family' },
@@ -61,22 +56,16 @@ const BudgetStep = ({ onNext, onBack }: StepProps) => {
             <Grid container spacing={3}>
                 <Grid item xs={12}>
                     <TextField
-                        select
                         fullWidth
                         label="Annual Tuition Budget"
+                        placeholder="e.g. $25,000, < 40k, or Flexible"
                         variant="outlined"
                         sx={glassInputSx}
                         defaultValue=""
                         {...register('budgetRange')}
                         error={!!errors.budgetRange}
-                        helperText={errors.budgetRange?.message}
-                    >
-                        {budgetRanges.map((option) => (
-                            <MenuItem key={option.value} value={option.value}>
-                                {option.label}
-                            </MenuItem>
-                        ))}
-                    </TextField>
+                        helperText={errors.budgetRange?.message || "Enter your approximate annual budget"}
+                    />
                 </Grid>
                 <Grid item xs={12}>
                     <TextField

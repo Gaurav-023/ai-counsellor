@@ -93,13 +93,79 @@ button {
 
 /* Animations */
 @keyframes fadeIn {
-  from { opacity: 0; transform: translateY(10px); }
-  to { opacity: 1; transform: translateY(0); }
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 .animate-fade-in {
   animation: fadeIn 0.6s ease-out forwards;
 }
 
-.delay-100 { animation-delay: 100ms; }
-.delay-200 { animation-delay: 200ms; }
+.delay-100 {
+  animation-delay: 100ms;
+}
+
+.delay-200 {
+  animation-delay: 200ms;
+}
+
+/* Custom White Theme Loader */
+.loader {
+  position: relative;
+  width: 100px;
+  height: 16px;
+}
+
+.loader:before,
+.loader:after {
+  content: "";
+  position: absolute;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 32px 0 #fff;
+  left: 0;
+  top: 0;
+  animation: ballMoveX 1s linear infinite;
+}
+
+.loader:after {
+  box-shadow: none;
+  transform-origin: 40px 0;
+  transform: rotate(-153deg);
+  animation: rotateLoader 1s linear infinite;
+}
+
+@keyframes rotateLoader {
+
+  0%,
+  10% {
+    transform: rotate(-153deg);
+  }
+
+  90%,
+  100% {
+    transform: rotate(0deg);
+  }
+}
+
+@keyframes ballMoveX {
+
+  0%,
+  10% {
+    transform: translateX(0)
+  }
+
+  90%,
+  100% {
+    transform: translateX(32px)
+  }
+}

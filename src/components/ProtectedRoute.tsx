@@ -44,7 +44,7 @@ const ProtectedRoute = () => {
     }
 
     if (!onboardingComplete) {
-        return <Navigate to="/onboarding" replace />;
+        return <Navigate to="/onboarding-method" replace />;
     }
 
     return <Outlet />;

@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Box, Drawer, List, ListItem, ListItemButton, ListItemIcon, ListItemText, IconButton, useTheme, useMediaQuery, Avatar, Typography, Menu, MenuItem, Divider } from '@mui/material';
 import { Outlet, useNavigate, useLocation } from 'react-router-dom';
-import { Home01Icon, UniversityIcon, BookOpen01Icon, UserIcon, Settings01Icon, Logout01Icon, Menu01Icon, File01Icon, HelpCircleIcon, ArrowLeft01Icon, ArrowRight01Icon } from 'hugeicons-react';
+import { Home01Icon, UniversityIcon, BookOpen01Icon, UserIcon, Settings01Icon, Logout01Icon, Menu01Icon, File01Icon, HelpCircleIcon, ArrowLeft01Icon, ArrowRight01Icon, BubbleChatIcon } from 'hugeicons-react';
 import { supabase } from '../lib/supabase';
 import { AIChat } from '../components/ai/AIChat';
 
@@ -44,6 +44,7 @@ const DashboardLayout = () => {
 
     const menuItems = [
         { text: 'Dashboard', icon: <Home01Icon size={24} />, path: '/dashboard' },
+        { text: 'AI Counselor', icon: <BubbleChatIcon size={24} />, path: '/counselor' },
         { text: 'Universities', icon: <UniversityIcon size={24} />, path: '/universities' },
         { text: 'Shortlist', icon: <BookOpen01Icon size={24} />, path: '/shortlist' },
         { text: 'Applications', icon: <File01Icon size={24} />, path: '/application' },
@@ -218,7 +219,7 @@ const DashboardLayout = () => {
                                 }}
                             >
                                 <Box sx={{ px: 2, py: 1.5 }}>
-                                    <Typography variant="subtitle2" fontWeight="700">Gaurav A.</Typography>
+                                    <Typography variant="subtitle2" fontWeight="700">User Profile</Typography>
                                     <Typography variant="caption" color="text.secondary">Student Account</Typography>
                                 </Box>
                                 <Divider />
