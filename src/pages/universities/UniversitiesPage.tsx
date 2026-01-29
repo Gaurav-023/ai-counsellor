@@ -4,10 +4,10 @@ import {
     Grid,
     Pagination,
     PaginationItem,
-    CircularProgress,
     Alert
 } from '@mui/material';
 import { useUniversities } from './hooks/useUniversities';
+import { UniCardSkeleton } from './components/UniCardSkeleton';
 import { UniCard } from './components/UniCard';
 import { UniFilters } from './components/UniFilters';
 
@@ -43,93 +43,99 @@ const UniversitiesPage = () => {
             <UniFilters filters={filters} onChange={handleFilterChange} />
 
             {/* Content */}
-            {loading ? (
-                <Box sx={{ display: 'flex', justifyContent: 'center', py: 12 }}>
-                    <CircularProgress size={40} sx={{ color: '#f97316' }} />
-                </Box>
-            ) : error ? (
-                <Alert severity="error">{error}</Alert>
-            ) : universities.length === 0 ? (
-                <Box sx={{ textAlign: 'center', py: 10 }}>
-                    <Typography color="text.secondary">No universities found.</Typography>
-                </Box>
-            ) : (
-                <>
+            {
+                loading ? (
                     <Grid container spacing={3} sx={{ mb: 6 }}>
-                        {universities.map(uni => {
-                            const shortlistItem = shortlist.find(s => {
-                                if (s.university_id === uni.id) return true;
-                                if (uni.id.toString().startsWith('hipo-') && s.university) {
-                                    return s.university.name === uni.name && s.university.country === uni.country;
-                                }
-                                return false;
-                            });
-
-                            const isShortlisted = !!shortlistItem;
-
-                            return (
-                                <Grid item xs={12} md={6} lg={4} xl={4} key={uni.id}>
-                                    <UniCard
-                                        uni={uni}
-                                        isShortlisted={isShortlisted}
-                                        shortlistCategory={shortlistItem?.category}
-                                        onShortlist={handleShortlist}
-                                        onRemove={handleRemove}
-                                    />
-                                </Grid>
-                            );
-                        })}
+                        {[1, 2, 3, 4, 5, 6].map((i) => (
+                            <Grid item xs={12} md={6} lg={4} xl={4} key={i}>
+                                <UniCardSkeleton />
+                            </Grid>
+                        ))}
                     </Grid>
+                ) : error ? (
+                    <Alert severity="error">{error}</Alert>
+                ) : universities.length === 0 ? (
+                    <Box sx={{ textAlign: 'center', py: 10 }}>
+                        <Typography color="text.secondary">No universities found.</Typography>
+                    </Box>
+                ) : (
+                    <>
+                        <Grid container spacing={3} sx={{ mb: 6 }}>
+                            {universities.map(uni => {
+                                const shortlistItem = shortlist.find(s => {
+                                    if (s.university_id === uni.id) return true;
+                                    if (uni.id.toString().startsWith('hipo-') && s.university) {
+                                        return s.university.name === uni.name && s.university.country === uni.country;
+                                    }
+                                    return false;
+                                });
 
-                    {/* Ant Design Style Pagination */}
-                    <Box sx={{ display: 'flex', justifyContent: 'center' }}>
-                        <Pagination
-                            count={totalPages}
-                            page={page}
-                            onChange={(_, v) => {
-                                setPage(v);
-                                window.scrollTo({ top: 0, behavior: 'smooth' });
-                            }}
-                            shape="rounded"
-                            renderItem={(item) => (
-                                <PaginationItem
-                                    {...item}
-                                    sx={{
+                                const isShortlisted = !!shortlistItem;
+
+                                return (
+                                    <Grid item xs={12} md={6} lg={4} xl={4} key={uni.id}>
+                                        <UniCard
+                                            uni={uni}
+                                            isShortlisted={isShortlisted}
+                                            shortlistCategory={shortlistItem?.category}
+                                            onShortlist={handleShortlist}
+                                            onRemove={handleRemove}
+                                        />
+                                    </Grid>
+                                );
+                            })}
+                        </Grid>
+
+                        {/* Ant Design Style Pagination */}
+                        <Box sx={{ display: 'flex', justifyContent: 'center' }}>
+                            <Pagination
+                                count={totalPages}
+                                page={page}
+                                onChange={(_, v) => {
+                                    setPage(v);
+                                    window.scrollTo({ top: 0, behavior: 'smooth' });
+                                }}
+                                shape="rounded"
+                                renderItem={(item) => (
+                                    <PaginationItem
+                                        {...item}
+                                        sx={{
+                                            border: '1px solid #e2e8f0',
+                                            bgcolor: 'white',
+                                            fontWeight: 600,
+                                            '&:hover': { bgcolor: '#f8fafc' },
+                                            '&.Mui-selected': {
+                                                bgcolor: '#f97316',
+                                                color: 'white',
+                                                borderColor: '#f97316',
+                                                '&:hover': { bgcolor: '#ea580c' }
+                                            }
+                                        }}
+                                    />
+                                )}
+                                sx={{
+                                    '& .MuiPaginationItem-root': {
+                                        fontFamily: 'inherit',
+                                        fontWeight: 600,
+                                        color: '#64748b',
                                         border: '1px solid #e2e8f0',
                                         bgcolor: 'white',
-                                        fontWeight: 600,
-                                        '&:hover': { bgcolor: '#f8fafc' },
-                                        '&.Mui-selected': {
-                                            bgcolor: '#f97316',
-                                            color: 'white',
-                                            borderColor: '#f97316',
-                                            '&:hover': { bgcolor: '#ea580c' }
-                                        }
-                                    }}
-                                />
-                            )}
-                            sx={{
-                                '& .MuiPaginationItem-root': {
-                                    fontFamily: 'inherit',
-                                    fontWeight: 600,
-                                    color: '#64748b',
-                                    border: '1px solid #e2e8f0',
-                                    bgcolor: 'white',
-                                    transition: 'all 0.2s',
-                                    borderRadius: 2
-                                },
-                                '& .Mui-selected': {
-                                    bgcolor: '#f97316 !important',
-                                    color: 'white !important',
-                                    borderColor: '#f97316 !important',
-                                    boxShadow: '0 4px 6px -1px rgba(249, 115, 22, 0.3)'
-                                }
-                            }}
-                        />
-                    </Box>
-                </>
-            )}
-        </Box>
+                                        transition: 'all 0.2s',
+                                        borderRadius: 2
+                                    },
+                                    '& .Mui-selected': {
+                                        bgcolor: '#f97316 !important',
+                                        color: 'white !important',
+                                        borderColor: '#f97316 !important',
+                                        boxShadow: '0 4px 6px -1px rgba(249, 115, 22, 0.3)'
+                                    }
+                                }}
+                            />
+                        </Box>
+                    </>
+                )
+            }
+        </Box >
     );
 };
 

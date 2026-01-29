@@ -117,55 +117,26 @@ button {
 }
 
 /* Custom White Theme Loader */
+/* Custom White Theme Loader */
 .loader {
-  position: relative;
-  width: 100px;
-  height: 16px;
-}
-
-.loader:before,
-.loader:after {
-  content: "";
-  position: absolute;
-  width: 16px;
-  height: 16px;
+  width: 24px;
+  height: 24px;
+  border: 3px solid #E2E8F0;
+  /* Light gray border */
+  border-bottom-color: #4F46E5;
+  /* Indigo accent */
   border-radius: 50%;
-  background: #fff;
-  box-shadow: 32px 0 #fff;
-  left: 0;
-  top: 0;
-  animation: ballMoveX 1s linear infinite;
+  display: inline-block;
+  box-sizing: border-box;
+  animation: rotation 1s linear infinite;
 }
 
-.loader:after {
-  box-shadow: none;
-  transform-origin: 40px 0;
-  transform: rotate(-153deg);
-  animation: rotateLoader 1s linear infinite;
-}
-
-@keyframes rotateLoader {
-
-  0%,
-  10% {
-    transform: rotate(-153deg);
-  }
-
-  90%,
-  100% {
+@keyframes rotation {
+  0% {
     transform: rotate(0deg);
   }
-}
 
-@keyframes ballMoveX {
-
-  0%,
-  10% {
-    transform: translateX(0)
-  }
-
-  90%,
   100% {
-    transform: translateX(32px)
+    transform: rotate(360deg);
   }
 }

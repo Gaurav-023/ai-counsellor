@@ -39,11 +39,13 @@ import type { ShortlistItem } from '../../lib/types';
 import { events } from '../../lib/events';
 
 const STAGES = [
-    'Building Profile',
-    'Discovering Universities',
-    'Finalizing Universities',
-    'Preparing Applications'
+    'Profile Setup',
+    'University Search',
+    'Shortlist & Strategy',
+    'Track Applications'
 ];
+
+const STAGE_ROUTES = ['/profile', '/universities', '/shortlist', '/application'];
 
 const DashboardPage = () => {
     const navigate = useNavigate();
@@ -82,14 +84,21 @@ const DashboardPage = () => {
 
     // --- Logic ---
     const getCurrentStage = (p: any, list: ShortlistItem[]) => {
-        if (!p) return 0;
-        if (!p.gpa || !p.intended_degree || !p.budget_range) return 0;
+        // Priority 1: Applications (Locked)
+        // If user has locked any university, they are in the application phase
         const hasLocked = list.some(s => s.status === 'Locked');
-        const hasShortlisted = list.length > 0;
         if (hasLocked) return 3;
-        if (hasShortlisted) return 2;
-        if (p.exam_ielts_status !== 'taken' && p.exam_gre_status !== 'taken') return 1;
-        return 1;
+
+        // Priority 2: Shortlist
+        // If user has shortlisted items (even if profile is incomplete), they are refining shortlist
+        if (list.length > 0) return 2;
+
+        // Priority 3: University Search
+        // If user has minimal profile details, they are searching
+        if (p && (p.intended_degree || p.degree_major || p.gpa || p.education_level)) return 1;
+
+        // Default: Profile Setup
+        return 0;
     };
 
     const getProfileStrength = (p: any) => {
@@ -473,7 +482,7 @@ const DashboardPage = () => {
                                     }}
                                 >
                                     {STAGES.map((label, index) => (
-                                        <Step key={label} expanded>
+                                        <Step key={label} expanded onClick={() => navigate(STAGE_ROUTES[index])} sx={{ cursor: 'pointer' }}>
                                             <StepLabel StepIconComponent={() => (
                                                 <Box sx={{
                                                     width: 24, height: 24, borderRadius: '50%',

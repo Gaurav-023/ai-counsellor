@@ -426,14 +426,7 @@ const ProfilePage = () => {
                 </Grid>
             </Grid>
 
-            {/* DEBUGGER: Temporary for troubleshooting */}
-            <Paper sx={{ p: 2, mt: 4, bgcolor: '#f1f5f9', border: '1px dashed #cbd5e1' }}>
-                <Typography variant="caption" sx={{ fontFamily: 'monospace', whiteSpace: 'pre-wrap' }}>
-                    <strong>DEBUG INFO:</strong>
-                    {'\n'}User ID: {formData.email ? 'Authenticated' : 'No User Found'}
-                    {'\n'}Raw Data Check: {JSON.stringify(formData, null, 2)}
-                </Typography>
-            </Paper>
+
 
             <Snackbar
                 open={!!notification}

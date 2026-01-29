@@ -2,7 +2,6 @@ import {
     Box,
     Typography,
     Grid,
-    CircularProgress,
     Alert,
     Button,
     Card,
@@ -13,6 +12,8 @@ import { useUniversities } from '../universities/hooks/useUniversities';
 import { UniCard } from '../universities/components/UniCard';
 import type { University } from '../../lib/types';
 import { LockIcon, BookOpen01Icon } from 'hugeicons-react';
+import { UniCardSkeleton } from '../universities/components/UniCardSkeleton';
+import { Skeleton } from '@mui/material';
 
 const ShortlistPage = () => {
     const {
@@ -63,11 +64,26 @@ const ShortlistPage = () => {
                 </Box>
             </Box>
 
+
+
             {/* Content */}
             {loading ? (
-                <Box sx={{ display: 'flex', justifyContent: 'center', py: 12 }}>
-                    <CircularProgress size={40} sx={{ color: '#f97316' }} />
-                </Box>
+                <Grid container spacing={3} sx={{ mb: 6 }}>
+                    {[1, 2].map((i) => (
+                        <Grid item xs={12} key={i}>
+                            <Box sx={{ display: 'flex', gap: 3, flexDirection: { xs: 'column', lg: 'row' } }}>
+                                {/* Left Skeleton */}
+                                <Box sx={{ flex: 1, maxWidth: { lg: 400 } }}>
+                                    <UniCardSkeleton />
+                                </Box>
+                                {/* Right Skeleton */}
+                                <Box sx={{ flex: 2 }}>
+                                    <Skeleton variant="rectangular" height="100%" sx={{ borderRadius: 4, minHeight: 400 }} />
+                                </Box>
+                            </Box>
+                        </Grid>
+                    ))}
+                </Grid>
             ) : error ? (
                 <Alert severity="error">{error}</Alert>
             ) : shortlist.length === 0 ? (
