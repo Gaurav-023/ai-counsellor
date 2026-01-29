@@ -188,15 +188,28 @@ export const useUniversities = () => {
             if (chatFilters.budget) effectiveFilters.budget = mapBudgetToFilter(chatFilters.budget);
             if (chatFilters.intake) effectiveFilters.intake = chatFilters.intake;
 
-            // Apply Profile Defaults (Only if no Chat/Manual override and in 'All' state)
-            const isDefaultState = filters.country === 'All' && filters.budget === 'All' && !chatFilters.country;
+            // Apply Profile Defaults (Smart Fill)
+            const isDefaultState = filters.country === 'All' && filters.budget === 'All' && filters.graduation === 'All' && !chatFilters.country;
 
             if (isDefaultState && profile) {
-                if (profile.preferred_countries?.[0]) {
+                // 1. Country: Pick first preference
+                if (profile.preferred_countries && profile.preferred_countries.length > 0) {
                     effectiveFilters.country = profile.preferred_countries[0];
                 }
-                if (profile.budget_range && effectiveFilters.budget === 'All') {
+
+                // 2. Budget: Map range
+                if (profile.budget_range) {
                     effectiveFilters.budget = mapBudgetToFilter(profile.budget_range);
+                }
+
+                // 3. Degree: Map Intended Degree to Undergraduate/Postgraduate
+                if (profile.intended_degree) {
+                    const deg = profile.intended_degree.toLowerCase();
+                    if (deg.includes('master') || deg.includes('phd') || deg.includes('mba')) {
+                        effectiveFilters.graduation = 'Postgraduate';
+                    } else if (deg.includes('bachelor') || deg.includes('undergrad')) {
+                        effectiveFilters.graduation = 'Undergraduate';
+                    }
                 }
             }
 
@@ -204,6 +217,7 @@ export const useUniversities = () => {
             const hasChanged =
                 filters.country !== effectiveFilters.country ||
                 filters.budget !== effectiveFilters.budget ||
+                filters.graduation !== effectiveFilters.graduation || // Added graduation check
                 filters.intake !== effectiveFilters.intake;
 
             if (hasChanged) {
@@ -272,10 +286,33 @@ export const useUniversities = () => {
                 finalId = await import('../../../lib/api').then(m => m.ensureUniversityExists(uni));
             }
 
-            await addToShortlist(finalId, category);
-            // Re-fetch shortlist
-            const newList = await getShortlist();
-            setShortlist(newList);
+            const newItem = await addToShortlist(finalId, category);
+
+            // Manual State Update (No Re-fetch)
+            // We need to construct the full object with the university data for the UI
+            let uniData = universities.find(u => u.id === uniId);
+
+            // Special handling for Hipo universities if we just created them
+            if (!uniData && finalId !== uniId) {
+                // We don't have the new generated ID in our local universities list easily available mapped to the Hipo ID
+                // But we can try to find it by name/country or just re-fetch to be safe in this edge case
+                const list = await getShortlist(); // Fallback for Hipo edge case
+                setShortlist(list);
+                return;
+            }
+
+            if (uniData) {
+                const newShortlistItem: ShortlistItem = {
+                    ...newItem,
+                    university: uniData
+                };
+                setShortlist(prev => [newShortlistItem, ...prev]);
+            } else {
+                // Fallback if we can't find local uni data (shouldn't happen for normal flow)
+                const list = await getShortlist();
+                setShortlist(list);
+            }
+
         } catch (err: any) {
             console.error(err);
             alert('Could not shortlist: ' + err.message);
@@ -287,40 +324,53 @@ export const useUniversities = () => {
 
         if (!itemToRemove) {
             console.warn("Attempted to remove item not in local shortlist state", universityId);
-            // Fallback: If for some reason state is out of sync, we might try to refresh or just return
             return;
         }
 
         if (!confirm('Remove from shortlist?')) return;
 
+        // Optimistic Update: Remove immediately
+        const previousShortlist = [...shortlist];
+        setShortlist(prev => prev.filter(item => item.id !== itemToRemove.id));
+
         try {
             await removeFromShortlist(itemToRemove.id);
-            // Optimistic update
-            setShortlist(prev => prev.filter(item => item.id !== itemToRemove.id));
-
-            // Re-fetch to be safe (optional, but good for consistency)
-            const newList = await getShortlist();
-            setShortlist(newList);
-        } catch (err) { console.error(err); }
+            // Success - no need to do anything else, or optionally background refresh
+            // getShortlist().then(setShortlist); 
+        } catch (err) {
+            console.error(err);
+            setShortlist(previousShortlist); // Revert
+            alert("Failed to remove from shortlist. Please try again.");
+        }
     };
 
     // --- NEW: Locking Logic ---
     const handleLock = async (shortlistId: string) => {
+        // Optimistic Update
+        const previousShortlist = [...shortlist];
+        setShortlist(prev => prev.map(item =>
+            item.id === shortlistId ? { ...item, status: 'Locked' as const } : item
+        ));
+
         try {
             await updateShortlistStatus(shortlistId, 'Locked');
-            const newList = await getShortlist();
-            setShortlist(newList);
         } catch (err: any) {
+            setShortlist(previousShortlist); // Revert
             alert("Could not lock: " + err.message);
         }
     };
 
     const handleUnlock = async (shortlistId: string) => {
+        // Optimistic Update
+        const previousShortlist = [...shortlist];
+        setShortlist(prev => prev.map(item =>
+            item.id === shortlistId ? { ...item, status: 'Shortlisted' as const } : item
+        ));
+
         try {
             await updateShortlistStatus(shortlistId, 'Shortlisted');
-            const newList = await getShortlist();
-            setShortlist(newList);
         } catch (err: any) {
+            setShortlist(previousShortlist); // Revert
             alert("Could not unlock: " + err.message);
         }
     };

@@ -16,6 +16,7 @@ import {
 } from '@mui/material';
 import {
     Mortarboard01Icon,
+    Delete02Icon
 } from 'hugeicons-react';
 import { useNavigate } from 'react-router-dom';
 import { getShortlist } from '../../lib/api';
@@ -59,6 +60,24 @@ const ApplicationPage = () => {
 
     const handleToggleTask = (id: number) => {
         setTasks(prev => prev.map(t => t.id === id ? { ...t, completed: !t.completed } : t));
+    };
+
+    const [newTaskText, setNewTaskText] = useState('');
+
+    const handleAddTask = () => {
+        if (!newTaskText.trim()) return;
+        const newTask = {
+            id: Date.now(),
+            text: newTaskText,
+            type: 'Custom',
+            completed: false
+        };
+        setTasks(prev => [...prev, newTask]);
+        setNewTaskText('');
+    };
+
+    const handleDeleteTask = (id: number) => {
+        setTasks(prev => prev.filter(t => t.id !== id));
     };
 
     if (loading) return <Box sx={{ p: 4 }}>Loading applications...</Box>;
@@ -107,19 +126,26 @@ const ApplicationPage = () => {
     // ];
 
     return (
-        <Box sx={{ maxWidth: 1440, mx: 'auto', px: 4, py: 4 }}>
+        <Box sx={{ maxWidth: 1440, mx: 'auto', px: { xs: 2, md: 4 }, py: { xs: 3, md: 4 } }}>
             <Box sx={{ mb: 4 }}>
                 <Typography variant="overline" fontWeight="700" color="#6366f1" sx={{ letterSpacing: '0.1em' }}>
                     APPLICATION PORTAL
                 </Typography>
-                <Typography variant="h3" fontWeight="800" color="#0f172a">
+                <Typography variant="h3" fontWeight="800" color="#0f172a" sx={{ fontSize: { xs: '2rem', md: '3rem' } }}>
                     Manage Applications
                 </Typography>
             </Box>
 
             {/* University Tabs */}
             <Box sx={{ borderBottom: 1, borderColor: 'divider', mb: 4 }}>
-                <Tabs value={selectedTab} onChange={handleTabChange} aria-label="university applications">
+                <Tabs
+                    value={selectedTab}
+                    onChange={handleTabChange}
+                    aria-label="university applications"
+                    variant="scrollable"
+                    scrollButtons="auto"
+                    allowScrollButtonsMobile
+                >
                     {lockedUniversities.map((item) => (
                         <Tab
                             key={item.id}
@@ -138,22 +164,22 @@ const ApplicationPage = () => {
 
                         {/* Header Card */}
                         <Card sx={{ borderRadius: 5, border: 'none', boxShadow: '0 4px 20px rgba(0,0,0,0.04)', mb: 4 }}>
-                            <CardContent sx={{ p: 4 }}>
+                            <CardContent sx={{ p: { xs: 2, md: 4 } }}>
                                 <Grid container spacing={2}>
                                     <Grid item xs={12} md={8}>
-                                        <Typography variant="h5" fontWeight="700" color="#1e293b" gutterBottom>
+                                        <Typography variant="h5" fontWeight="700" color="#1e293b" gutterBottom sx={{ fontSize: { xs: '1.25rem', md: '1.5rem' } }}>
                                             {currentUni.university?.name}
                                         </Typography>
-                                        <Stack direction="row" spacing={2} sx={{ mb: 3 }}>
-                                            <Chip label="Master's Application" size="small" sx={{ bgcolor: '#eef2ff', color: '#4f46e5', fontWeight: 600 }} />
-                                            <Chip label="Fall 2026" size="small" sx={{ bgcolor: '#ecfdf5', color: '#059669', fontWeight: 600 }} />
+                                        <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap sx={{ mb: 3 }}>
+                                            <Chip label="Master's Application" size="small" sx={{ bgcolor: '#eef2ff', color: '#4f46e5', fontWeight: 600, mb: 1 }} />
+                                            <Chip label="Fall 2026" size="small" sx={{ bgcolor: '#ecfdf5', color: '#059669', fontWeight: 600, mb: 1 }} />
                                         </Stack>
                                         <Typography variant="body2" color="#64748b">
                                             Location: {currentUni.university?.location} • {currentUni.university?.country}
                                         </Typography>
                                     </Grid>
-                                    <Grid item xs={12} md={4} sx={{ textAlign: { xs: 'left', md: 'right' } }}>
-                                        <Box sx={{ display: 'inline-block', textAlign: 'center', p: 2, bgcolor: '#fef2f2', borderRadius: 3, border: '1px solid #fee2e2' }}>
+                                    <Grid item xs={12} md={4} sx={{ textAlign: { xs: 'left', md: 'right' }, mt: { xs: 2, md: 0 } }}>
+                                        <Box sx={{ display: 'inline-block', textAlign: 'center', p: 2, bgcolor: '#fef2f2', borderRadius: 3, border: '1px solid #fee2e2', width: { xs: '100%', md: 'auto' } }}>
                                             <Typography variant="caption" fontWeight="700" color="#ef4444" sx={{ textTransform: 'uppercase' }}>Deadline</Typography>
                                             <Typography variant="h6" fontWeight="800" color="#b91c1c">Dec 15</Typography>
                                             <Typography variant="caption" color="#ef4444">45 Days Left</Typography>
@@ -181,11 +207,15 @@ const ApplicationPage = () => {
                                             '&:last-child': { borderBottom: 'none' },
                                             transition: 'all 0.2s',
                                             bgcolor: task.completed ? '#f0fdf4' : 'transparent',
-                                            '&:hover': { bgcolor: task.completed ? '#dcfce7' : '#f8fafc' }
+                                            '&:hover': {
+                                                bgcolor: task.completed ? '#dcfce7' : '#f8fafc',
+                                                '& .delete-icon': { opacity: 1 }
+                                            }
                                         }}
                                     >
                                         <Checkbox
                                             checked={task.completed}
+                                            onClick={(e) => e.stopPropagation()}
                                             onChange={() => handleToggleTask(task.id)}
                                             sx={{ '&.Mui-checked': { color: '#22c55e' } }}
                                         />
@@ -195,8 +225,55 @@ const ApplicationPage = () => {
                                             </Typography>
                                             <Typography variant="caption" color="#94a3b8" fontWeight="500">{task.type}</Typography>
                                         </Box>
+                                        <Box
+                                            className="delete-icon"
+                                            onClick={(e) => { e.stopPropagation(); handleDeleteTask(task.id); }}
+                                            sx={{
+                                                p: 1,
+                                                borderRadius: '50%',
+                                                color: '#ef4444',
+                                                opacity: { xs: 1, md: 0 },
+                                                transition: 'all 0.2s',
+                                                '&:hover': { bgcolor: '#fee2e2' }
+                                            }}
+                                        >
+                                            <Delete02Icon size={18} />
+                                        </Box>
                                     </Box>
                                 ))}
+                                {/* Add New Task Input */}
+                                <Box sx={{ p: 3, display: 'flex', gap: 2, bgcolor: '#f8fafc', borderTop: '1px solid #e2e8f0' }}>
+                                    <input
+                                        type="text"
+                                        placeholder="Add a new task..."
+                                        value={newTaskText}
+                                        onChange={(e) => setNewTaskText(e.target.value)}
+                                        onKeyDown={(e) => e.key === 'Enter' && handleAddTask()}
+                                        style={{
+                                            flexGrow: 1,
+                                            padding: '10px 14px',
+                                            borderRadius: '8px',
+                                            border: '1px solid #cbd5e1',
+                                            outline: 'none',
+                                            fontSize: '0.95rem'
+                                        }}
+                                    />
+                                    <Button
+                                        variant="contained"
+                                        onClick={handleAddTask}
+                                        disabled={!newTaskText.trim()}
+                                        sx={{
+                                            bgcolor: '#000000',
+                                            color: '#ffffff',
+                                            fontWeight: 700,
+                                            boxShadow: 'none',
+                                            '&:hover': { bgcolor: '#000000ff', boxShadow: 'none' },
+                                            '&.Mui-disabled': { bgcolor: '#ffffffff', color: '#ffffffff' }
+                                        }}
+                                    >
+                                        Add
+                                    </Button>
+                                </Box>
                             </CardContent>
                         </Card>
 

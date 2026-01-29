@@ -20,9 +20,33 @@ import {
     BookOpen01Icon,
     CheckmarkCircle01Icon
 } from 'hugeicons-react';
-import { getStudentProfile, updateStudentProfile } from '../../lib/api';
-
+import { supabase } from '../../lib/supabase';
+import { updateStudentProfile } from '../../lib/api';
 import { events } from '../../lib/events';
+
+// --- Constants (Matched with Onboarding) ---
+const budgetRanges = [
+    { value: 'under_20k', label: 'Under $20,000' },
+    { value: '20k_40k', label: '$20,000 - $40,000' },
+    { value: '40k_60k', label: '$40,000 - $60,000' },
+    { value: '60k_plus', label: '$60,000+' },
+];
+
+const fundingSources = [
+    { value: 'self', label: 'Self Funded / Family' },
+    { value: 'loan', label: 'Education Loan' },
+    { value: 'scholarship', label: 'Scholarship Required' },
+    { value: 'mixed', label: 'Mixed Sources' },
+];
+
+const commonDegrees = [
+    "Bachelor's Degree",
+    "Master's Degree",
+    "PhD / Doctorate",
+    "Diploma / Certificate",
+    "Associate Degree",
+    "MBA"
+];
 
 const ProfilePage = () => {
     const [loading, setLoading] = useState(true);
@@ -30,6 +54,7 @@ const ProfilePage = () => {
     const [notification, setNotification] = useState<{ message: string, type: 'success' | 'error' } | null>(null);
 
     const [formData, setFormData] = useState({
+        email: '', // Added Email
         full_name: '',
         education_level: '',
         degree_major: '',
@@ -39,6 +64,7 @@ const ProfilePage = () => {
         field_of_study: '',
         preferred_countries: [] as string[],
         budget_range: '',
+        funding_source: '', // Added funding_source
         exam_ielts_status: '',
         exam_ielts_score: '',
         exam_gre_status: '',
@@ -58,26 +84,57 @@ const ProfilePage = () => {
 
     const loadProfile = async () => {
         try {
-            // Only show loading spinner on initial load to avoid flickering updates
-            // setLoading(true); 
-            const profile = await getStudentProfile();
-            if (profile) {
-                setFormData({
-                    full_name: profile.full_name || '',
-                    education_level: profile.education_level || '',
-                    degree_major: profile.degree_major || '',
-                    gpa: profile.gpa || '',
-                    graduation_year: profile.graduation_year?.toString() || '',
-                    intended_degree: profile.intended_degree || '',
-                    field_of_study: profile.field_of_study || '',
-                    preferred_countries: profile.preferred_countries || [],
-                    budget_range: profile.budget_range || '',
-                    exam_ielts_status: profile.exam_ielts_status || 'Not Taken',
-                    exam_ielts_score: profile.exam_ielts_score || '',
-                    exam_gre_status: profile.exam_gre_status || 'Not Taken',
-                    exam_gre_score: profile.exam_gre_score || ''
-                });
+            // setLoading(true);
+            const { data: { user } } = await supabase.auth.getUser();
+            if (!user) {
+                console.error("No user found in ProfilePage loadProfile");
+                return;
             }
+
+            console.log("Fetching profile for user:", user.id);
+
+            // 1. Fetch Basic Profile
+            const { data: basicProfile, error: basicError } = await supabase
+                .from('profiles')
+                .select('*')
+                .eq('id', user.id)
+                .single();
+
+            if (basicError) console.error("Basic Profile Fetch Error:", basicError);
+
+            // 2. Fetch Student Details (Directly like Onboarding)
+            const { data: studentDetails, error: studentError } = await supabase
+                .from('student_profiles')
+                .select('*')
+                .eq('id', user.id)
+                .single();
+
+            if (studentError) console.error("Student Profile Fetch Error:", studentError);
+            console.log("Student Details fetched:", studentDetails);
+
+            // 3. Populate State
+            setFormData({
+                email: user.email || '',
+                full_name: basicProfile?.full_name || '',
+
+                // Student Details (with optional chaining safety)
+                education_level: studentDetails?.education_level || '',
+                degree_major: studentDetails?.degree_major || '',
+                gpa: studentDetails?.gpa || '',
+                graduation_year: studentDetails?.graduation_year?.toString() || '',
+
+                intended_degree: studentDetails?.intended_degree || '',
+                field_of_study: studentDetails?.field_of_study || '',
+                preferred_countries: studentDetails?.preferred_countries || [],
+                budget_range: studentDetails?.budget_range || '',
+                funding_source: studentDetails?.funding_source || '',
+
+                exam_ielts_status: studentDetails?.exam_ielts_status || 'Not Taken',
+                exam_ielts_score: studentDetails?.exam_ielts_score || '',
+                exam_gre_status: studentDetails?.exam_gre_status || 'Not Taken',
+                exam_gre_score: studentDetails?.exam_gre_score || ''
+            });
+
         } catch (err) {
             console.error("Failed to load profile", err);
             setNotification({ message: 'Failed to load profile data', type: 'error' });
@@ -93,8 +150,12 @@ const ProfilePage = () => {
     const handleSave = async () => {
         try {
             setSaving(true);
+
+            // Exclude 'email' as it's not in student_profiles table
+            const { email, ...profileData } = formData;
+
             await updateStudentProfile({
-                ...formData,
+                ...profileData,
                 graduation_year: formData.graduation_year ? parseInt(formData.graduation_year) : null
             });
 
@@ -115,7 +176,7 @@ const ProfilePage = () => {
     if (loading) {
         return (
             <Box sx={{ display: 'flex', justifyContent: 'center', py: 10 }}>
-                <CircularProgress sx={{ color: '#f97316' }} />
+                <CircularProgress sx={{ color: '#0f172a' }} />
             </Box>
         );
     }
@@ -126,7 +187,7 @@ const ProfilePage = () => {
                 <Box>
                     <Typography variant="h4" fontWeight="800" color="#0f172a">Your Profile</Typography>
                     <Typography variant="body1" color="#64748b">
-                        Manage your academic details and preferences to get better AI recommendations.
+                        Manage your academic details and preferences.
                     </Typography>
                 </Box>
                 <Button
@@ -137,7 +198,9 @@ const ProfilePage = () => {
                     startIcon={saving ? <CircularProgress size={20} color="inherit" /> : <CheckmarkCircle01Icon />}
                     sx={{
                         bgcolor: '#0f172a',
+                        color: 'white',
                         fontWeight: 700,
+                        px: 4,
                         '&:hover': { bgcolor: '#334155' }
                     }}
                 >
@@ -148,31 +211,76 @@ const ProfilePage = () => {
             <Grid container spacing={3}>
                 {/* Personal & Academic */}
                 <Grid item xs={12} md={8}>
+                    {/* Identity Section */}
                     <Paper elevation={0} sx={{ p: 4, borderRadius: 4, border: '1px solid #e2e8f0', mb: 3 }}>
-                        <Typography variant="h6" fontWeight="700" sx={{ mb: 3, display: 'flex', alignItems: 'center', gap: 1 }}>
-                            <UserCircleIcon color="#f97316" /> Personal & Academic
-                        </Typography>
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 3, mb: 4 }}>
+                            <Box sx={{
+                                width: 80, height: 80,
+                                borderRadius: '50%',
+                                bgcolor: '#0f172a',
+                                color: 'white',
+                                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                fontSize: '2rem', fontWeight: 800
+                            }}>
+                                {formData.full_name ? formData.full_name.charAt(0).toUpperCase() : 'U'}
+                            </Box>
+                            <Box>
+                                <Typography variant="h6" fontWeight="bold">Profile Picture</Typography>
+                                <Typography variant="body2" color="text.secondary">Currently using default avatar</Typography>
+                            </Box>
+                        </Box>
+
                         <Grid container spacing={3}>
                             <Grid item xs={12} sm={6}>
                                 <TextField
                                     fullWidth label="Full Name"
                                     value={formData.full_name}
                                     onChange={(e) => handleChange('full_name', e.target.value)}
+                                    InputLabelProps={{ shrink: true }}
                                 />
                             </Grid>
                             <Grid item xs={12} sm={6}>
                                 <TextField
-                                    fullWidth label="Current GPA"
-                                    value={formData.gpa}
-                                    onChange={(e) => handleChange('gpa', e.target.value)}
-                                    helperText="e.g. 3.8/4.0 or 8.5/10"
+                                    fullWidth label="Email Address"
+                                    value={formData.email}
+                                    disabled
+                                    InputProps={{ readOnly: true, sx: { bgcolor: '#f8fafc' } }}
+                                    InputLabelProps={{ shrink: true }}
                                 />
+                            </Grid>
+                        </Grid>
+                    </Paper>
+
+                    <Paper elevation={0} sx={{ p: 4, borderRadius: 4, border: '1px solid #e2e8f0', mb: 3 }}>
+                        <Typography variant="h6" fontWeight="700" sx={{ mb: 3, display: 'flex', alignItems: 'center', gap: 1 }}>
+                            <UserCircleIcon color="#0f172a" /> Academic History
+                        </Typography>
+                        <Grid container spacing={3}>
+                            <Grid item xs={12} sm={6}>
+                                <TextField
+                                    select fullWidth label="Current Education Level"
+                                    value={formData.education_level}
+                                    onChange={(e) => handleChange('education_level', e.target.value)}
+                                >
+                                    <MenuItem value="High School">High School</MenuItem>
+                                    <MenuItem value="Undergraduate">Undergraduate</MenuItem>
+                                    <MenuItem value="Postgraduate">Postgraduate</MenuItem>
+                                </TextField>
                             </Grid>
                             <Grid item xs={12} sm={6}>
                                 <TextField
-                                    fullWidth label="Major / Degree"
+                                    fullWidth label="Major / Stream"
                                     value={formData.degree_major}
                                     onChange={(e) => handleChange('degree_major', e.target.value)}
+                                    placeholder="e.g. Computer Science / PCM"
+                                />
+                            </Grid>
+                            <Grid item xs={12} sm={6}>
+                                <TextField
+                                    fullWidth label="Current GPA / Percentage"
+                                    value={formData.gpa}
+                                    onChange={(e) => handleChange('gpa', e.target.value)}
+                                    helperText="e.g. 3.8/4.0 or 85%"
                                 />
                             </Grid>
                             <Grid item xs={12} sm={6}>
@@ -183,23 +291,12 @@ const ProfilePage = () => {
                                     onChange={(e) => handleChange('graduation_year', e.target.value)}
                                 />
                             </Grid>
-                            <Grid item xs={12} sm={6}>
-                                <TextField
-                                    select fullWidth label="Education Level"
-                                    value={formData.education_level}
-                                    onChange={(e) => handleChange('education_level', e.target.value)}
-                                >
-                                    <MenuItem value="High School">High School</MenuItem>
-                                    <MenuItem value="Undergraduate">Undergraduate</MenuItem>
-                                    <MenuItem value="Postgraduate">Postgraduate</MenuItem>
-                                </TextField>
-                            </Grid>
                         </Grid>
                     </Paper>
 
                     <Paper elevation={0} sx={{ p: 4, borderRadius: 4, border: '1px solid #e2e8f0' }}>
                         <Typography variant="h6" fontWeight="700" sx={{ mb: 3, display: 'flex', alignItems: 'center', gap: 1 }}>
-                            <BookOpen01Icon color="#f97316" /> Test Scores
+                            <BookOpen01Icon color="#0f172a" /> Standardized Tests
                         </Typography>
                         <Grid container spacing={3}>
                             <Grid item xs={12} sm={6}>
@@ -251,7 +348,7 @@ const ProfilePage = () => {
                 <Grid item xs={12} md={4}>
                     <Paper elevation={0} sx={{ p: 4, borderRadius: 4, border: '1px solid #e2e8f0', height: '100%' }}>
                         <Typography variant="h6" fontWeight="700" sx={{ mb: 3, display: 'flex', alignItems: 'center', gap: 1 }}>
-                            <Globe02Icon color="#f97316" /> Study Goals
+                            <Globe02Icon color="#0f172a" /> Study Goals
                         </Typography>
 
                         <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
@@ -259,31 +356,47 @@ const ProfilePage = () => {
                                 fullWidth label="Intended Major"
                                 value={formData.field_of_study}
                                 onChange={(e) => handleChange('field_of_study', e.target.value)}
+                                helperText="What you want to study abroad"
                             />
                             <TextField
                                 select fullWidth label="Target Degree"
                                 value={formData.intended_degree}
                                 onChange={(e) => handleChange('intended_degree', e.target.value)}
                             >
-                                <MenuItem value="Bachelors">Bachelors</MenuItem>
-                                <MenuItem value="Masters">Masters</MenuItem>
-                                <MenuItem value="PhD">PhD</MenuItem>
+                                {commonDegrees.map(deg => (
+                                    <MenuItem key={deg} value={deg}>{deg}</MenuItem>
+                                ))}
                             </TextField>
 
                             <Divider />
 
                             <Box>
                                 <Typography variant="subtitle2" fontWeight="700" sx={{ mb: 1, display: 'flex', alignItems: 'center', gap: 1 }}>
-                                    <Coins01Icon size={16} /> Budget Range
+                                    <Coins01Icon size={16} /> Budget & Funding
                                 </Typography>
                                 <TextField
-                                    select fullWidth
+                                    select fullWidth label="Budget Range"
                                     value={formData.budget_range}
                                     onChange={(e) => handleChange('budget_range', e.target.value)}
+                                    sx={{ mb: 2 }}
                                 >
-                                    <MenuItem value="< 20k">Less than $20k/yr</MenuItem>
-                                    <MenuItem value="20k - 40k">$20k - $40k/yr</MenuItem>
-                                    <MenuItem value="> 40k">More than $40k/yr</MenuItem>
+                                    {budgetRanges.map((option) => (
+                                        <MenuItem key={option.value} value={option.value}>
+                                            {option.label}
+                                        </MenuItem>
+                                    ))}
+                                </TextField>
+
+                                <TextField
+                                    select fullWidth label="Funding Source"
+                                    value={formData.funding_source}
+                                    onChange={(e) => handleChange('funding_source', e.target.value)}
+                                >
+                                    {fundingSources.map((option) => (
+                                        <MenuItem key={option.value} value={option.value}>
+                                            {option.label}
+                                        </MenuItem>
+                                    ))}
                                 </TextField>
                             </Box>
 
@@ -297,6 +410,7 @@ const ProfilePage = () => {
                                             onDelete={() => {
                                                 handleChange('preferred_countries', formData.preferred_countries.filter(x => x !== c));
                                             }}
+                                            sx={{ borderRadius: 2 }}
                                         />
                                     ))}
                                 </Box>
@@ -314,12 +428,23 @@ const ProfilePage = () => {
                                     <MenuItem value="Canada">Canada</MenuItem>
                                     <MenuItem value="Australia">Australia</MenuItem>
                                     <MenuItem value="Germany">Germany</MenuItem>
+                                    <MenuItem value="Ireland">Ireland</MenuItem>
+                                    <MenuItem value="New Zealand">New Zealand</MenuItem>
                                 </TextField>
                             </Box>
                         </Box>
                     </Paper>
                 </Grid>
             </Grid>
+
+            {/* DEBUGGER: Temporary for troubleshooting */}
+            <Paper sx={{ p: 2, mt: 4, bgcolor: '#f1f5f9', border: '1px dashed #cbd5e1' }}>
+                <Typography variant="caption" sx={{ fontFamily: 'monospace', whiteSpace: 'pre-wrap' }}>
+                    <strong>DEBUG INFO:</strong>
+                    {'\n'}User ID: {formData.email ? 'Authenticated' : 'No User Found'}
+                    {'\n'}Raw Data Check: {JSON.stringify(formData, null, 2)}
+                </Typography>
+            </Paper>
 
             <Snackbar
                 open={!!notification}

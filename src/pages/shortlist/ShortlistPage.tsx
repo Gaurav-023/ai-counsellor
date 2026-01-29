@@ -149,6 +149,24 @@ const ShortlistPage = () => {
                                                         </Grid>
                                                     ))}
                                                 </Grid>
+
+                                                <Box sx={{ mt: 3, pt: 3, borderTop: '1px solid #f1f5f9' }}>
+                                                    <Button
+                                                        variant="contained"
+                                                        fullWidth
+                                                        href="/application"
+                                                        endIcon={<BookOpen01Icon size={18} />}
+                                                        sx={{
+                                                            bgcolor: '#1e3a8a',
+                                                            color: 'white',
+                                                            fontWeight: 700,
+                                                            py: 1.5,
+                                                            '&:hover': { bgcolor: '#172554' }
+                                                        }}
+                                                    >
+                                                        Go to Application Portal
+                                                    </Button>
+                                                </Box>
                                             </CardContent>
                                         </Card>
                                     </Box>
