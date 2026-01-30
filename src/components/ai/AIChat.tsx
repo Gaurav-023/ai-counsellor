@@ -476,14 +476,94 @@ export const AIChat = () => {
                                     >
                                         <ReactMarkdown
                                             components={{
-                                                p: ({ node, ...props }) => <Typography variant="body2" sx={{ lineHeight: 1.6, m: 0 }} {...props} />,
-                                                a: ({ node, ...props }) => <a style={{ color: isUser ? '#fff' : '#000', textDecoration: 'underline' }} {...props} />,
-                                                strong: ({ node, ...props }) => <strong style={{ fontWeight: 700 }} {...props} />,
-                                                ul: ({ node, ...props }) => <ul style={{ paddingLeft: '20px', margin: '8px 0' }} {...props} />,
-                                                li: ({ node, ...props }) => <li style={{ marginBottom: '4px' }} {...props} />
+                                                p: ({ node, ...props }) => <Typography variant="body1" sx={{ fontSize: '0.95rem', lineHeight: 1.6, m: 0, mb: 1, '&:last-child': { mb: 0 } }} {...props} />,
+                                                a: ({ node, ...props }) => <a target="_blank" rel="noopener noreferrer" style={{ color: isUser ? '#fff' : '#2563EB', textDecoration: 'underline' }} {...props} />,
+                                                strong: ({ node, ...props }) => <Box component="span" sx={{ fontWeight: 600, color: isUser ? 'inherit' : '#0F172A' }} {...props} />,
+                                                ul: ({ node, ...props }) => <Box component="ul" sx={{ pl: 2.5, my: 1 }} {...props} />,
+                                                ol: ({ node, ...props }) => <Box component="ol" sx={{ pl: 2.5, my: 1 }} {...props} />,
+                                                li: ({ node, ...props }) => <Box component="li" sx={{ fontSize: '0.95rem', mb: 0.5, '&::marker': { color: isUser ? 'rgba(255,255,255,0.7)' : '#64748B' } }} {...props} />,
+                                                h1: ({ node, ...props }) => <Typography variant="subtitle1" sx={{ fontWeight: 700, mt: 2, mb: 1, color: isUser ? 'inherit' : '#0F172A', fontSize: '1rem' }} {...props} />,
+                                                h2: ({ node, ...props }) => <Typography variant="subtitle1" sx={{ fontWeight: 700, mt: 1.5, mb: 1, color: isUser ? 'inherit' : '#0F172A', fontSize: '1rem' }} {...props} />,
+                                                h3: ({ node, ...props }) => <Typography variant="subtitle2" sx={{ fontWeight: 600, mt: 1, mb: 0.5, color: isUser ? 'inherit' : '#0F172A', fontSize: '0.95rem' }} {...props} />,
+                                                blockquote: ({ node, ...props }) => (
+                                                    <Box component="blockquote" sx={{
+                                                        borderLeft: `3px solid ${isUser ? 'rgba(255,255,255,0.3)' : '#CBD5E1'}`,
+                                                        pl: 2, py: 0.5, my: 1.5, ml: 0,
+                                                        color: isUser ? 'rgba(255,255,255,0.8)' : '#475569',
+                                                        fontStyle: 'italic',
+                                                        fontSize: '0.95rem'
+                                                    }} {...props} />
+                                                ),
+                                                code: ({ node, inline, className, children, ...props }: any) => {
+                                                    if (inline) {
+                                                        return (
+                                                            <Box component="code" sx={{
+                                                                bgcolor: isUser ? 'rgba(255,255,255,0.2)' : '#F1F5F9',
+                                                                color: isUser ? 'inherit' : '#0F172A',
+                                                                px: 0.5, py: 0.2, borderRadius: 1,
+                                                                fontFamily: 'monospace', fontSize: '0.9em', fontWeight: 600
+                                                            }} {...props}>
+                                                                {children}
+                                                            </Box>
+                                                        );
+                                                    }
+                                                    return (
+                                                        <Box component="pre" sx={{
+                                                            bgcolor: '#F8FAFC',
+                                                            color: '#1E293B',
+                                                            p: 2, borderRadius: 2,
+                                                            overflowX: 'auto',
+                                                            fontFamily: 'monospace',
+                                                            fontSize: '0.9em',
+                                                            my: 1.5,
+                                                            border: '1px solid #E2E8F0',
+                                                            '& code': { bgcolor: 'transparent', p: 0 }
+                                                        }}>
+                                                            <code {...props}>{children}</code>
+                                                        </Box>
+                                                    );
+                                                }
                                             }}
                                         >
-                                            {msg.content}
+                                            {(() => {
+                                                // CLEANING LOGIC: Runs on every render to ensure clean UI
+                                                let text = msg.content;
+
+                                                // 1. Hide <<<ACTION...>>> blocks completely
+                                                text = text.replace(/<<<ACTION[\s\S]*?>>>/g, '');
+
+                                                // 2. Parse Profile JSON into Clean Text
+                                                text = text.replace(/({[\s\n]*"[a-zA-Z0-9_]+":[\s\S]*?})/g, (match) => {
+                                                    try {
+                                                        const data = JSON.parse(match);
+                                                        // Basic validation to ensure it looks like our profile data
+                                                        if (Object.keys(data).length < 2) return match;
+
+                                                        let md = "\n\n---\n**📋 Updated Profile Summary**\n\n";
+                                                        Object.entries(data).forEach(([key, val]) => {
+                                                            if (!val || val === "N/A" || val === "NOT SET" || val === "Not Taken") return;
+
+                                                            // Beautify Key
+                                                            const label = key
+                                                                .replace(/_/g, " ")
+                                                                .replace(/\b\w/g, (c) => c.toUpperCase())
+                                                                .replace("Gpa", "GPA")
+                                                                .replace("Ielts", "IELTS")
+                                                                .replace("Gre", "GRE");
+
+                                                            // Beautify Value
+                                                            const valueStr = Array.isArray(val) ? val.join(", ") : String(val);
+
+                                                            md += `* **${label}:** ${valueStr}\n`;
+                                                        });
+                                                        return md + "\n---\n";
+                                                    } catch (e) {
+                                                        return match; // Fallback to raw if logic fails
+                                                    }
+                                                });
+
+                                                return text.trim();
+                                            })()}
                                         </ReactMarkdown>
                                     </Paper>
 
