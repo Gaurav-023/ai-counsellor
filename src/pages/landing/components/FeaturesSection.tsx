@@ -15,7 +15,7 @@ import {
 import { motion, type Variants } from 'framer-motion';
 
 const fadeInUp: Variants = {
-    hidden: { opacity: 0, y: 60 },
+    hidden: { opacity: 0, y: 40 },
     visible: {
         opacity: 1,
         y: 0,
@@ -33,7 +33,7 @@ const FeaturesSection = () => {
     ];
 
     return (
-        <Box sx={{ py: 15, bgcolor: alpha(theme.palette.primary.main, 0.02) }}>
+        <Box sx={{ py: 15, bgcolor: '#F8FAFC' }}> {/* Very Light Gray Background */}
             <Container maxWidth="lg">
                 <motion.div
                     initial="hidden"
@@ -41,10 +41,10 @@ const FeaturesSection = () => {
                     viewport={{ once: false, margin: "-100px", amount: 0.3 }}
                     variants={fadeInUp}
                 >
-                    <Typography variant="h3" align="center" fontWeight="bold" gutterBottom color="text.primary">
+                    <Typography variant="h3" align="center" fontWeight="800" gutterBottom sx={{ color: '#0F172A', letterSpacing: '-0.02em', mb: 2 }}>
                         Why choose AI Counsellor?
                     </Typography>
-                    <Typography variant="h6" align="center" color="text.secondary" sx={{ mb: 10, maxWidth: 600, mx: 'auto' }}>
+                    <Typography variant="h6" align="center" sx={{ color: '#64748B', mb: 10, maxWidth: 600, mx: 'auto', fontWeight: 400 }}>
                         We simplify the complex process of studying abroad using advanced AI agents.
                     </Typography>
                 </motion.div>
@@ -65,19 +65,18 @@ const FeaturesSection = () => {
                                         p: 5,
                                         height: '100%',
                                         borderRadius: 6,
-                                        bgcolor: '#ffffff',
-                                        border: '1px solid',
-                                        borderColor: 'transparent',
+                                        bgcolor: '#FFFFFF',
+                                        border: '1px solid #E2E8F0', // Light border
                                         display: 'flex',
                                         flexDirection: 'column',
                                         alignItems: 'center',
                                         textAlign: 'center',
-                                        boxShadow: '0 4px 24px -6px rgba(0,0,0,0.05)',
+                                        boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.05)',
                                         transition: 'all 0.4s cubic-bezier(0.4, 0, 0.2, 1)',
                                         '&:hover': {
-                                            transform: 'translateY(-12px)',
-                                            borderColor: alpha(theme.palette.primary.main, 0.1),
-                                            boxShadow: `0 20px 40px -10px ${alpha(theme.palette.primary.main, 0.15)}`
+                                            transform: 'translateY(-8px)',
+                                            borderColor: '#3B82F6', // Blue Border on hover
+                                            boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)'
                                         }
                                     }}
                                 >
@@ -85,22 +84,22 @@ const FeaturesSection = () => {
                                         sx={{
                                             mb: 4,
                                             p: 2.5,
-                                            borderRadius: '50%', // Circle shape for icon container
-                                            bgcolor: alpha(theme.palette.primary.main, 0.08),
-                                            color: 'primary.main',
+                                            borderRadius: 4,
+                                            bgcolor: '#EFF6FF', // Light Blue bg
+                                            color: '#2563EB', // Blue icon
                                             display: 'flex',
                                             alignItems: 'center',
                                             justifyContent: 'center',
-                                            width: 80,
-                                            height: 80
+                                            width: 72,
+                                            height: 72
                                         }}
                                     >
-                                        <feature.icon size={40} className="w-10 h-10" />
+                                        <feature.icon size={32} />
                                     </Box>
-                                    <Typography variant="h5" fontWeight="bold" gutterBottom color="text.primary" sx={{ mb: 2 }}>
+                                    <Typography variant="h5" fontWeight="700" gutterBottom sx={{ color: '#0F172A', mb: 2 }}>
                                         {feature.title}
                                     </Typography>
-                                    <Typography variant="body1" color="text.secondary" sx={{ lineHeight: 1.7 }}>
+                                    <Typography variant="body1" sx={{ color: '#64748B', lineHeight: 1.6 }}>
                                         {feature.desc}
                                     </Typography>
                                 </Paper>

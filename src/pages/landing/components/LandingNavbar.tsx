@@ -20,23 +20,11 @@ const LandingNavbar = () => {
     const [scrolled, setScrolled] = useState(false);
 
     useMotionValueEvent(scrollY, "change", (latest) => {
-
-        // "Scroll down appear" - interpreted as standard "Smart Hide" (Hide on down, Show on up) 
-        // OR "Transparent at top, Solid on scroll".
-        // Evaluating user request: "scroll up must be hide scroll down appear"
-        // This is highly non-standard if literal. 
-        // Let's implement the Premium Standard: 
-        // 1. Transparent at top (y < 50)
-        // 2. Glassmorphism + Visible when scrolling
-        // 3. Smart Hide: Hide when scrolling down fast, Show when scrolling up.
-
         if (latest > 50) {
             setScrolled(true);
         } else {
             setScrolled(false);
         }
-
-        // Always show navbar
         setHidden(false);
     });
 
@@ -61,11 +49,11 @@ const LandingNavbar = () => {
                 color="transparent"
                 elevation={0}
                 sx={{
-                    bgcolor: scrolled ? alpha(theme.palette.background.default, 0.8) : 'transparent',
-                    backdropFilter: scrolled ? 'blur(12px)' : 'none',
-                    borderBottom: scrolled ? `1px solid ${alpha(theme.palette.divider, 0.1)}` : 'none',
+                    bgcolor: scrolled ? 'rgba(255, 255, 255, 0.8)' : 'transparent', // White Glass
+                    backdropFilter: scrolled ? 'blur(16px)' : 'none',
+                    borderBottom: scrolled ? `1px solid ${alpha('#E2E8F0', 0.8)}` : 'none',
                     transition: 'all 0.3s ease',
-                    boxShadow: scrolled ? '0 4px 30px rgba(0, 0, 0, 0.05)' : 'none'
+                    boxShadow: scrolled ? '0 4px 20px rgba(0, 0, 0, 0.03)' : 'none'
                 }}
             >
                 <Container maxWidth="lg">
@@ -77,8 +65,8 @@ const LandingNavbar = () => {
                                 sx={{
                                     p: 1,
                                     borderRadius: '12px',
-                                    bgcolor: alpha(theme.palette.primary.main, 0.1),
-                                    color: 'primary.main',
+                                    bgcolor: '#EFF6FF', // Light Blue
+                                    color: '#2563EB', // Primary Blue
                                     display: 'flex'
                                 }}
                             >
@@ -91,9 +79,9 @@ const LandingNavbar = () => {
                                 href="/"
                                 sx={{
                                     fontFamily: 'inherit',
-                                    fontWeight: 700,
+                                    fontWeight: 800,
                                     letterSpacing: '-0.02em',
-                                    color: 'text.primary',
+                                    color: '#0F172A', // Dark Slate
                                     textDecoration: 'none',
                                     display: { xs: 'none', md: 'flex' }
                                 }}
@@ -105,26 +93,31 @@ const LandingNavbar = () => {
                         <Box sx={{ flexGrow: 1 }} />
 
                         <Button
-                            color="inherit"
                             component={RouterLink}
                             to="/login"
                             sx={{
                                 mr: 2,
-                                color: 'text.secondary',
-                                fontWeight: 500,
-                                '&:hover': { color: 'text.primary', bgcolor: 'transparent' }
+                                color: '#475569', // Slate 600
+                                fontWeight: 600,
+                                '&:hover': { color: '#0F172A', bgcolor: 'transparent' }
                             }}
                         >
-                            Login
+                            Log in
                         </Button>
                         <Button
                             variant="contained"
-                            color="primary"
                             component={RouterLink}
                             to="/signup"
                             sx={{
                                 boxShadow: 'none',
-                                '&:hover': { boxShadow: '0 10px 20px -10px rgba(79, 70, 229, 0.5)' }
+                                bgcolor: '#0F172A',
+                                color: 'white',
+                                borderRadius: 50,
+                                px: 3,
+                                '&:hover': {
+                                    bgcolor: '#1E293B',
+                                    boxShadow: '0 4px 12px rgba(15, 23, 42, 0.15)'
+                                }
                             }}
                         >
                             Get Started

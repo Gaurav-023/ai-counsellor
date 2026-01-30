@@ -206,7 +206,7 @@ const DashboardLayout = () => {
     return (
         <Box sx={{
             display: 'flex', minHeight: '100vh',
-            background: 'linear-gradient(135deg, #EFF6FF 0%, #F1F5F9 100%)'
+            background: '#F8FAFC' // Neutral Off-White (No Blue Tint)
         }}>
             {/* Desktop Sidebar */}
             <Box component="nav" sx={{ width: { md: currentDrawerWidth }, flexShrink: { md: 0 }, transition: 'width 0.3s cubic-bezier(0.4, 0, 0.2, 1)' }}>

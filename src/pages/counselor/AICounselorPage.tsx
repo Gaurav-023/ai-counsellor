@@ -180,11 +180,8 @@ const AICounselorPage = () => {
                 ];
             });
 
-            if (aiMsg.id) {
-                handleSpeak(displayText, aiMsg.id);
-            } else {
-                handleSpeak(displayText, 'temp-ai-response');
-            }
+            // Auto-speak removed per user request. 
+            // Audio will only play when user clicks the speaker icon.
 
         } catch (error) {
             console.error("Chat Error:", error);
@@ -306,7 +303,7 @@ const AICounselorPage = () => {
 
             {/* Header */}
             <Box sx={{
-                px: 3, py: 3,
+                px: 3, py: 1.5,
                 bgcolor: 'rgba(255, 255, 255, 0.95)', backdropFilter: 'blur(24px)',
                 borderBottom: '1px solid rgba(241, 245, 249, 1)',
                 display: 'flex', alignItems: 'center',

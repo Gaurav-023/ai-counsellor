@@ -18,7 +18,7 @@ import { motion, type Variants } from 'framer-motion';
 
 
 const cardVariants: Variants = {
-    hidden: { opacity: 0, y: 200 },
+    hidden: { opacity: 0, y: 40 },
     visible: {
         opacity: 1,
         y: 0,
@@ -70,7 +70,7 @@ const HowItWorksSection = () => {
     ];
 
     return (
-        <Box sx={{ py: 15, bgcolor: '#ffffff', position: 'relative', overflow: 'hidden' }}>
+        <Box sx={{ py: 15, bgcolor: '#FFFFFF', position: 'relative', overflow: 'hidden' }}>
             <Container maxWidth="md">
                 <motion.div
                     initial={{ opacity: 0, y: 30 }}
@@ -78,10 +78,10 @@ const HowItWorksSection = () => {
                     viewport={{ once: false }}
                     transition={{ duration: 0.6 }}
                 >
-                    <Typography variant="h3" align="center" fontWeight="bold" gutterBottom color="text.primary">
+                    <Typography variant="h3" align="center" fontWeight="800" gutterBottom sx={{ color: '#0F172A', letterSpacing: '-0.02em', mb: 2 }}>
                         How it works
                     </Typography>
-                    <Typography variant="h6" align="center" color="text.secondary" sx={{ mb: 10 }}>
+                    <Typography variant="h6" align="center" sx={{ color: '#64748B', mb: 10, maxWidth: 600, mx: 'auto', fontWeight: 400 }}>
                         Your journey to a dream university in 4 simple steps.
                     </Typography>
                 </motion.div>
@@ -99,9 +99,8 @@ const HowItWorksSection = () => {
                                         left: 28,
                                         top: 60,
                                         bottom: -40,
-                                        width: 4,
-                                        bgcolor: alpha(theme.palette.primary.main, 0.1),
-                                        borderRadius: 2,
+                                        width: 2,
+                                        bgcolor: '#E2E8F0', // Light Gray Line
                                         zIndex: 0
                                     }}
                                 >
@@ -112,8 +111,7 @@ const HowItWorksSection = () => {
                                         viewport={{ once: false }}
                                         style={{
                                             width: '100%',
-                                            background: `linear-gradient(to bottom, ${theme.palette.primary.main}, ${theme.palette.secondary.main})`,
-                                            borderRadius: 2
+                                            background: '#3B82F6', // Blue fill
                                         }}
                                     />
                                 </Box>
@@ -132,13 +130,13 @@ const HowItWorksSection = () => {
                                             width: 60,
                                             height: 60,
                                             borderRadius: '50%',
-                                            background: `linear-gradient(135deg, ${theme.palette.background.paper} 0%, #ffffff 100%)`,
-                                            border: `2px solid ${alpha(theme.palette.primary.main, 0.2)}`,
+                                            bgcolor: 'white',
+                                            border: '1px solid #E2E8F0',
                                             display: 'flex',
                                             alignItems: 'center',
                                             justifyContent: 'center',
-                                            boxShadow: `0 10px 30px -10px ${alpha(theme.palette.primary.main, 0.3)}`,
-                                            color: 'primary.main'
+                                            boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.05)',
+                                            color: '#2563EB' // Blue Icon
                                         }}
                                     >
                                         <step.icon size={28} />
@@ -159,52 +157,27 @@ const HowItWorksSection = () => {
                                     sx={{
                                         p: 4,
                                         borderRadius: 4,
-                                        border: `1px solid ${alpha(theme.palette.divider, 0.6)}`,
-                                        bgcolor: 'background.paper',
+                                        border: '1px solid #E2E8F0',
+                                        bgcolor: 'white',
                                         position: 'relative',
                                         transition: 'transform 0.3s ease',
                                         '&:hover': {
-                                            transform: 'translateY(-5px)',
-                                            borderColor: alpha(theme.palette.primary.main, 0.3),
-                                            boxShadow: `0 20px 40px -10px ${alpha(theme.palette.divider, 0.5)}`
+                                            transform: 'translateY(-2px)',
+                                            borderColor: '#CBD5E1',
+                                            boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.05)'
                                         },
-                                        // Arrow pointing to left
-                                        '&::before': {
-                                            content: '""',
-                                            position: 'absolute',
-                                            left: -10,
-                                            top: 24,
-                                            width: 20,
-                                            height: 20,
-                                            bgcolor: 'background.paper',
-                                            borderLeft: `1px solid ${alpha(theme.palette.divider, 0.6)}`,
-                                            borderBottom: `1px solid ${alpha(theme.palette.divider, 0.6)}`,
-                                            transform: 'rotate(45deg)',
-                                            borderRadius: '0 0 0 4px'
-                                        }
                                     }}
                                 >
-                                    <Typography variant="h6" fontWeight="bold" gutterBottom color="text.primary">
+                                    <Typography variant="h6" fontWeight="700" gutterBottom sx={{ color: '#0F172A' }}>
                                         {step.label}
                                     </Typography>
-                                    <Typography variant="body1" color="text.secondary">
+                                    <Typography variant="body1" sx={{ color: '#64748B' }}>
                                         {step.desc}
                                     </Typography>
                                 </Paper>
                             </motion.div>
                         </Box>
                     ))}
-
-                    {/* Final Arrow pointing down */}
-                    <Box sx={{ display: 'flex', justifyContent: 'flex-start', pl: 2.2, mt: -4 }}>
-                        <motion.div
-                            initial={{ opacity: 0, y: -20 }}
-                            whileInView={{ opacity: 1, y: 0 }}
-                            viewport={{ once: false }}
-                            transition={{ delay: 1 }}
-                        >
-                        </motion.div>
-                    </Box>
 
                 </Box>
 
@@ -216,11 +189,14 @@ const HowItWorksSection = () => {
                     >
                         <Button
                             variant="outlined"
-                            color="primary"
                             size="large"
                             component={RouterLink}
                             to="/signup"
-                            sx={{ borderRadius: 10, px: 5, py: 1.5, borderWidth: 2 }}
+                            sx={{
+                                borderRadius: 50, px: 5, py: 1.5, borderWidth: 1,
+                                color: '#0F172A', borderColor: '#E2E8F0',
+                                '&:hover': { borderColor: '#0F172A', bgcolor: 'transparent' }
+                            }}
                         >
                             Start Your Journey Now
                         </Button>

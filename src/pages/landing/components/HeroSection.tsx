@@ -86,34 +86,38 @@ const HeroSection = () => {
                             </motion.div>
 
                             <motion.div variants={fadeInUp}>
-                                <Typography
-                                    variant="h1"
-                                    gutterBottom
-                                    sx={{
-                                        fontSize: { xs: '2.5rem', md: '4.5rem' },
-                                        lineHeight: 1.1,
-                                        mb: 3,
-                                        color: 'text.primary',
-                                        fontFamily: '"Inter", sans-serif',
-                                        fontWeight: 800,
-                                    }}
-                                >
+                                <Typography variant="h1" gutterBottom sx={{
+                                    fontSize: { xs: '2.5rem', md: '4.5rem' },
+                                    lineHeight: 1.1,
+                                    mb: 3,
+                                    color: 'text.primary',
+                                    fontFamily: '"Inter", sans-serif',
+                                    fontWeight: 800
+                                }}>
                                     Plan your study-abroad <br />
-                                    <Box
-                                        component="span"
-                                        sx={{
-                                            fontFamily: '"Playfair Display", "Times New Roman", serif',
-                                            fontStyle: 'italic',
-                                            fontWeight: 400,
-                                            color: 'primary.main',
-                                            display: 'inline-block',
-                                        }}
-                                    >
+
+                                    <Box component="span" sx={{
+                                        fontFamily: '"Playfair Display", "Times New Roman", serif',
+                                        fontStyle: 'italic',
+                                        fontWeight: 400,
+                                        color: 'primary.main',
+                                        position: 'relative',
+                                        display: 'inline-block',
+                                        '&::after': {
+
+                                            position: 'absolute',
+                                            bottom: 10,
+                                            left: 0,
+                                            width: '100%',
+                                            height: '2px',
+                                            bgcolor: 'primary.main',
+                                            opacity: 0.3
+                                        }
+                                    }}>
                                         journey with AI.
                                     </Box>
                                 </Typography>
                             </motion.div>
-
 
                             <motion.div variants={fadeInUp}>
                                 <Typography variant="h6" color="text.secondary" paragraph sx={{ mb: 5, maxWidth: '650px', mx: 'auto', lineHeight: 1.6 }}>
@@ -146,12 +150,73 @@ const HeroSection = () => {
                                     </Button>
                                 </Stack>
                             </motion.div>
+
+                            {/* IMAGE PLACEHOLDER */}
+                            <motion.div variants={fadeInUp}>
+                                <Box
+                                    sx={{
+                                        position: 'relative',
+                                        mx: 'auto',
+                                        mt: 8, // Added gap above image
+                                        width: '100%',
+                                        maxWidth: 1000,
+                                        aspectRatio: '16 / 9',
+                                        bgcolor: '#F8FAFC',
+                                        borderRadius: { xs: 4, md: 6 },
+                                        border: '1px solid #E5E7EB',
+                                        boxShadow: '0 20px 40px rgba(0, 0, 0, 0.15)',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'center',
+                                        overflow: 'hidden',
+                                    }}
+                                >
+                                    {/* Dashboard Image */}
+                                    <Box
+                                        component="img"
+                                        src="/dashboard.webp"
+                                        alt="Dashboard preview"
+                                        sx={{
+                                            width: '98%',
+                                            height: '98%',
+                                            objectFit: 'contain',
+                                            borderRadius: 4,
+                                            boxShadow: '0 12px 32px rgba(0,0,0,0.18)',
+                                            backgroundColor: '#ffffff',
+                                        }}
+                                    />
+
+                                    {/* Subtle glass overlay */}
+                                    <Box
+                                        sx={{
+                                            position: 'absolute',
+                                            inset: 0,
+                                            background:
+                                                'linear-gradient(180deg, rgba(255,255,255,0) 0%, rgba(255,255,255,0.06) 100%)',
+                                            pointerEvents: 'none',
+                                        }}
+                                    />
+                                </Box>
+                                <Typography
+                                    variant="caption"
+                                    sx={{
+                                        display: 'block',
+                                        mt: 3,
+                                        color: 'text.secondary',
+                                        fontWeight: 500,
+                                        letterSpacing: '0.02em'
+                                    }}
+                                >
+                                    Join thousands of students securing admissions to top global universities.
+                                </Typography>
+                            </motion.div>
                         </motion.div>
                     </Grid>
                 </Grid>
             </Container>
+
         </Box >
     );
 };
 
-export default HeroSection;
+export default HeroSection; 
