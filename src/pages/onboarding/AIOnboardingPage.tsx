@@ -3,7 +3,7 @@ import { Box, Typography, TextField, IconButton, Paper, Avatar, Button, LinearPr
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../../lib/supabase';
 import { updateStudentProfile } from '../../lib/api';
-import { SentIcon, ArrowRight01Icon, Tick02Icon, SparklesIcon } from 'hugeicons-react';
+import { SentIcon, ArrowRight01Icon, Tick02Icon, BotIcon } from 'hugeicons-react';
 import ReactMarkdown from 'react-markdown';
 
 interface Message {
@@ -396,7 +396,7 @@ const AIOnboardingPage = () => {
                             height: 40,
                             border: '1px solid #E0E7FF'
                         }}>
-                            <SparklesIcon size={20} />
+                            <BotIcon size={20} />
                         </Avatar>
                         <Box>
                             <Typography variant="subtitle1" fontWeight="700" color="#1E293B" sx={{ lineHeight: 1.2 }}>
@@ -437,7 +437,7 @@ const AIOnboardingPage = () => {
                                     width: 64, height: 64, borderRadius: '50%', bgcolor: '#E0E7FF', color: '#4F46E5',
                                     display: 'inline-flex', alignItems: 'center', justifyContent: 'center', mb: 2
                                 }}>
-                                    <SparklesIcon size={32} />
+                                    <BotIcon size={32} />
                                 </Box>
                                 <Typography variant="body2" color="#64748B">
                                     AI Counselor is ready to help.
@@ -470,7 +470,7 @@ const AIOnboardingPage = () => {
                                             color: '#4F46E5',
                                             boxShadow: '0 2px 4px rgba(0,0,0,0.05)'
                                         }}>
-                                            <SparklesIcon size={18} />
+                                            <BotIcon size={18} />
                                         </Avatar>
                                     )}
 

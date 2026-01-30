@@ -1,8 +1,10 @@
-import { useState } from 'react';
-import { Box, Drawer, List, ListItem, ListItemButton, ListItemIcon, ListItemText, IconButton, useTheme, useMediaQuery, Avatar, Typography, Menu, MenuItem, Divider } from '@mui/material';
+
+import { useState, useEffect } from 'react';
+import { Box, Drawer, List, ListItem, ListItemButton, ListItemIcon, ListItemText, IconButton, useTheme, useMediaQuery, Avatar, Typography, Tooltip } from '@mui/material';
 import { Outlet, useNavigate, useLocation } from 'react-router-dom';
-import { Home01Icon, UniversityIcon, BookOpen01Icon, UserIcon, Settings01Icon, Logout01Icon, Menu01Icon, File01Icon, HelpCircleIcon, ArrowLeft01Icon, ArrowRight01Icon, BubbleChatIcon } from 'hugeicons-react';
+import { Home01Icon, UniversityIcon, BookOpen01Icon, UserIcon, Settings01Icon, Logout01Icon, Menu01Icon, File01Icon, ArrowLeft01Icon, ArrowRight01Icon, BubbleChatIcon, BotIcon } from 'hugeicons-react';
 import { supabase } from '../lib/supabase';
+import { getStudentProfile } from '../lib/api';
 import { AIChat } from '../components/ai/AIChat';
 
 const DRAWER_WIDTH = 260;
@@ -13,12 +15,33 @@ const DashboardLayout = () => {
     const isMobile = useMediaQuery(theme.breakpoints.down('md'));
     const [mobileOpen, setMobileOpen] = useState(false);
     const [isCollapsed, setIsCollapsed] = useState(false);
-
-    // Profile Menu State
-    const [anchorElUser, setAnchorElUser] = useState<null | HTMLElement>(null);
+    const [userName, setUserName] = useState<string>('Student');
+    const [userInitials, setUserInitials] = useState<string>('ST');
 
     const navigate = useNavigate();
     const location = useLocation();
+
+    useEffect(() => {
+        fetchUserProfile();
+    }, []);
+
+    const fetchUserProfile = async () => {
+        try {
+            const profile = await getStudentProfile();
+            if (profile && profile.full_name) {
+                setUserName(profile.full_name);
+                const initials = profile.full_name
+                    .split(' ')
+                    .map((n: string) => n[0])
+                    .join('')
+                    .toUpperCase()
+                    .slice(0, 2);
+                setUserInitials(initials);
+            }
+        } catch (error) {
+            console.error("Failed to fetch user profile", error);
+        }
+    };
 
     const handleDrawerToggle = () => {
         setMobileOpen(!mobileOpen);
@@ -28,28 +51,19 @@ const DashboardLayout = () => {
         setIsCollapsed(!isCollapsed);
     };
 
-    const handleOpenUserMenu = (event: React.MouseEvent<HTMLElement>) => {
-        setAnchorElUser(event.currentTarget);
-    };
-
-    const handleCloseUserMenu = () => {
-        setAnchorElUser(null);
-    };
-
     const handleLogout = async () => {
-        handleCloseUserMenu();
         await supabase.auth.signOut();
         navigate('/login');
     };
 
     const menuItems = [
-        { text: 'Dashboard', icon: <Home01Icon size={24} />, path: '/dashboard' },
-        { text: 'AI Counselor', icon: <BubbleChatIcon size={24} />, path: '/counselor' },
-        { text: 'Universities', icon: <UniversityIcon size={24} />, path: '/universities' },
-        { text: 'Shortlist', icon: <BookOpen01Icon size={24} />, path: '/shortlist' },
-        { text: 'Applications', icon: <File01Icon size={24} />, path: '/application' },
-        { text: 'Your Profile', icon: <UserIcon size={24} />, path: '/profile' },
-        { text: 'Settings', icon: <Settings01Icon size={24} />, path: '/settings' },
+        { text: 'Dashboard', icon: <Home01Icon size={22} />, path: '/dashboard' },
+        { text: 'AI Counselor', icon: <BubbleChatIcon size={22} />, path: '/counselor' },
+        { text: 'Universities', icon: <UniversityIcon size={22} />, path: '/universities' },
+        { text: 'Shortlist', icon: <BookOpen01Icon size={22} />, path: '/shortlist' },
+        { text: 'Applications', icon: <File01Icon size={22} />, path: '/application' },
+        { text: 'Your Profile', icon: <UserIcon size={22} />, path: '/profile' },
+        { text: 'Settings', icon: <Settings01Icon size={22} />, path: '/settings' },
     ];
 
     const drawerContent = (
@@ -57,55 +71,86 @@ const DashboardLayout = () => {
             height: '100%',
             display: 'flex',
             flexDirection: 'column',
-            bgcolor: 'white', // White Background (Requested)
-            color: '#1e293b', // Black/Slate Text
-            borderRight: '1px solid #e2e8f0'
+            bgcolor: 'rgba(255, 255, 255, 0.75)',
+            backdropFilter: 'blur(20px)',
+            color: '#1e293b',
+            borderRight: '1px solid rgba(255, 255, 255, 0.5)',
+            boxShadow: 'inset -20px 0 30px -30px rgba(0,0,0,0.05)'
         }}>
-            {/* Logo Area */}
+            {/* Logo Area & Toggle */}
             <Box sx={{
-                p: 3,
+                p: 3, pt: 4,
                 display: 'flex',
                 alignItems: 'center',
-                gap: 2,
-                justifyContent: isCollapsed ? 'center' : 'flex-start',
-                borderBottom: '1px solid #f1f5f9'
+                justifyContent: isCollapsed ? 'center' : 'space-between', // Space between logo and toggle
+                mb: 2
             }}>
-                <img src="https://picsum.photos/48" alt="Logo" style={{ width: 32, height: 32, borderRadius: 8, objectFit: 'cover', flexShrink: 0 }} />
-                {!isCollapsed && (
-                    <Box sx={{ display: 'flex', justifyContent: 'space-between', width: '100%', alignItems: 'center' }}>
-                        <Typography variant="h6" sx={{ fontWeight: 800, letterSpacing: '-0.5px', color: '#0f172a' }}>
-                            AI Counsellor
-                        </Typography>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                    <Box sx={{
+                        width: 40, height: 40,
+                        borderRadius: 3,
+                        background: 'linear-gradient(135deg, #2563EB 0%, #1E40AF 100%)',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        color: 'white',
+                        boxShadow: '0 8px 16px -4px rgba(37, 99, 235, 0.3)'
+                    }}>
+                        <BotIcon size={22} />
                     </Box>
+
+                    {!isCollapsed && (
+                        <Box sx={{ display: 'flex', flexDirection: 'column' }}>
+                            <Typography variant="h6" sx={{ fontWeight: 800, lineHeight: 1, letterSpacing: '-0.02em', color: '#111827', fontSize: '1.1rem' }}>
+                                AI Counselor
+                            </Typography>
+                            <Typography variant="caption" sx={{ color: '#64748b', fontSize: '0.75rem', fontWeight: 600, mt: 0.5, letterSpacing: '0.05em', textTransform: 'uppercase' }}>
+                                Guidance
+                            </Typography>
+                        </Box>
+                    )}
+                </Box>
+
+                {/* Desktop Collapse Toggle (Inside Sidebar now) */}
+                {!isMobile && !isCollapsed && (
+                    <IconButton
+                        onClick={handleCollapseToggle}
+                        size="small"
+                        sx={{ color: '#94A3B8', '&:hover': { color: '#0F172A', bgcolor: 'rgba(0,0,0,0.05)' } }}
+                    >
+                        <ArrowLeft01Icon size={20} />
+                    </IconButton>
                 )}
             </Box>
 
             {/* Menu Items */}
-            <List sx={{ px: 2, pt: 3, flexGrow: 1 }}>
+            <List sx={{ px: 2, pt: 1, flexGrow: 1 }}>
                 {menuItems.map((item) => {
                     const isActive = location.pathname === item.path || (item.path === '/dashboard' && location.pathname === '/');
                     return (
-                        <ListItem key={item.text} disablePadding sx={{ mb: 0.5 }}>
+                        <ListItem key={item.text} disablePadding sx={{ mb: 0.75 }}>
                             <ListItemButton
                                 onClick={() => navigate(item.path)}
                                 sx={{
-                                    borderRadius: 2,
+                                    borderRadius: 3,
                                     justifyContent: isCollapsed ? 'center' : 'flex-start',
-                                    px: isCollapsed ? 1 : 2,
+                                    px: isCollapsed ? 1 : 2.5,
                                     py: 1.5,
-                                    bgcolor: isActive ? '#f1f5f9' : 'transparent',
-                                    color: isActive ? '#0f172a' : '#64748b',
-                                    transition: 'all 0.2s',
+                                    bgcolor: isActive ? 'rgba(255,255,255,0.9)' : 'transparent',
+                                    color: isActive ? '#2563EB' : '#64748b',
+                                    boxShadow: isActive ? '0 4px 6px -1px rgba(0, 0, 0, 0.02), 0 2px 4px -1px rgba(0, 0, 0, 0.02)' : 'none',
+                                    transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
                                     '&:hover': {
-                                        bgcolor: '#f8fafc',
-                                        color: '#0f172a'
+                                        bgcolor: isActive ? 'white' : 'rgba(255,255,255,0.5)',
+                                        color: isActive ? '#1E40AF' : '#1e293b',
+                                        transform: 'translateX(4px)'
                                     }
                                 }}
                             >
                                 <ListItemIcon sx={{
-                                    color: isActive ? '#0f172a' : 'inherit',
+                                    color: 'inherit',
                                     minWidth: isCollapsed ? 0 : 40,
-                                    justifyContent: 'center'
+                                    justifyContent: 'center',
+                                    '& svg': { transition: 'transform 0.2s' },
+                                    '.MuiListItemButton-root:hover & svg': { transform: 'scale(1.1)' }
                                 }}>
                                     {item.icon}
                                 </ListItemIcon>
@@ -113,9 +158,9 @@ const DashboardLayout = () => {
                                     <ListItemText
                                         primary={item.text}
                                         primaryTypographyProps={{
-                                            fontSize: '0.9rem',
+                                            fontSize: '0.95rem',
                                             fontWeight: isActive ? 700 : 500,
-                                            letterSpacing: '0.2px'
+                                            letterSpacing: '0.1px'
                                         }}
                                     />
                                 )}
@@ -124,15 +169,47 @@ const DashboardLayout = () => {
                     );
                 })}
             </List>
+
+            {/* User Profile Footer */}
+            {(!isCollapsed || isMobile) && (
+                <Box sx={{ p: 2, m: 2, borderRadius: 4, bgcolor: 'rgba(255,255,255,0.5)', border: '1px solid rgba(255,255,255,0.6)' }}>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                        <Avatar sx={{ width: 36, height: 36, bgcolor: '#2563EB', fontSize: '0.8rem', fontWeight: 'bold', boxShadow: '0 4px 6px -2px rgba(37, 99, 235, 0.3)' }}>
+                            {userInitials}
+                        </Avatar>
+                        <Box sx={{ overflow: 'hidden' }}>
+                            <Typography variant="subtitle2" fontWeight="700" noWrap color="#1e293b">{userName}</Typography>
+                            <Typography variant="caption" color="text.secondary" noWrap>Student Profile</Typography>
+                        </Box>
+                        <Tooltip title="Log Out">
+                            <IconButton size="small" onClick={handleLogout} sx={{ ml: 'auto', color: '#94A3B8', '&:hover': { color: '#EF4444', bgcolor: '#FEF2F2' } }}>
+                                <Logout01Icon size={16} />
+                            </IconButton>
+                        </Tooltip>
+                    </Box>
+                </Box>
+            )}
+
+            {/* Collapsed Toggle (Footer option for collapsed state) */}
+            {!isMobile && isCollapsed && (
+                <Box sx={{ display: 'flex', justifyContent: 'center', pb: 2 }}>
+                    <IconButton onClick={handleCollapseToggle} sx={{ color: '#64748b' }}>
+                        <ArrowRight01Icon size={20} />
+                    </IconButton>
+                </Box>
+            )}
         </Box>
     );
 
     const currentDrawerWidth = isCollapsed ? COLLAPSED_DRAWER_WIDTH : DRAWER_WIDTH;
 
     return (
-        <Box sx={{ display: 'flex', minHeight: '100vh', bgcolor: '#f8fafc' }}>
+        <Box sx={{
+            display: 'flex', minHeight: '100vh',
+            background: 'linear-gradient(135deg, #EFF6FF 0%, #F1F5F9 100%)'
+        }}>
             {/* Desktop Sidebar */}
-            <Box component="nav" sx={{ width: { md: currentDrawerWidth }, flexShrink: { md: 0 }, transition: 'width 0.3s' }}>
+            <Box component="nav" sx={{ width: { md: currentDrawerWidth }, flexShrink: { md: 0 }, transition: 'width 0.3s cubic-bezier(0.4, 0, 0.2, 1)' }}>
                 <Drawer
                     variant={isMobile ? "temporary" : "permanent"}
                     open={isMobile ? mobileOpen : true}
@@ -142,9 +219,10 @@ const DashboardLayout = () => {
                             boxSizing: 'border-box',
                             width: isMobile ? DRAWER_WIDTH : currentDrawerWidth,
                             borderRight: 'none',
-                            transition: 'width 0.3s',
+                            transition: 'width 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
                             overflowX: 'hidden',
-                            bgcolor: 'white'
+                            bgcolor: 'transparent',
+                            boxShadow: 'none'
                         },
                     }}
                 >
@@ -156,90 +234,33 @@ const DashboardLayout = () => {
             <Box component="main" sx={{
                 flexGrow: 1,
                 width: { md: `calc(100% - ${currentDrawerWidth}px)` },
-                transition: 'width 0.3s',
+                transition: 'width 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
                 display: 'flex',
                 flexDirection: 'column',
                 height: '100vh',
-                overflow: 'hidden'
+                overflow: 'hidden',
+                position: 'relative' // For absolute positioning if needed
             }}>
-                {/* --- TOP HEADER (Desktop & Mobile) --- */}
-                <Box sx={{
-                    px: { xs: 2, md: 4 },
-                    py: 2,
-                    bgcolor: 'white',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'space-between',
-                    borderBottom: '1px solid #e2e8f0',
-                    zIndex: 10
-                }}>
-                    {/* Left: Collapse Toggle + Page Title */}
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                        {isMobile ? (
-                            <IconButton onClick={handleDrawerToggle} edge="start" sx={{ color: '#1e293b' }}>
-                                <Menu01Icon />
-                            </IconButton>
-                        ) : (
-                            <IconButton
-                                onClick={handleCollapseToggle}
-                                size="small"
-                                sx={{ color: '#64748b', '&:hover': { color: '#0f172a', bgcolor: '#f1f5f9' } }}
-                            >
-                                {isCollapsed ? <ArrowRight01Icon size={20} /> : <ArrowLeft01Icon size={20} />}
-                            </IconButton>
-                        )}
 
-                        <Typography variant="h5" fontWeight="800" color="#1e293b" sx={{ letterSpacing: '-0.5px' }}>
-                            {menuItems.find(i => i.path === location.pathname)?.text || 'Dashboard'}
-                        </Typography>
-                    </Box>
-
-                    {/* Right: Help Icon + Profile Menu */}
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                        {/* Help Icon (Kept as "1 icon more") */}
-                        <IconButton sx={{ color: '#64748b', '&:hover': { color: '#16a34a', bgcolor: '#dcfce7' } }}>
-                            <HelpCircleIcon size={22} />
+                {/* Mobile Menu Button - Floating Top Left */}
+                {isMobile && (
+                    <Box sx={{ position: 'absolute', top: 16, left: 16, zIndex: 1100 }}>
+                        <IconButton
+                            onClick={handleDrawerToggle}
+                            sx={{
+                                bgcolor: 'white', color: '#1e293b',
+                                boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)',
+                                '&:hover': { bgcolor: '#f8fafc' }
+                            }}
+                        >
+                            <Menu01Icon size={24} />
                         </IconButton>
-
-                        <Box sx={{ ml: 1 }}>
-                            <IconButton onClick={handleOpenUserMenu} sx={{ p: 0 }}>
-                                <Avatar sx={{ width: 40, height: 40, bgcolor: '#0f172a', color: 'white', fontSize: '1rem', fontWeight: 'bold' }}>GA</Avatar>
-                            </IconButton>
-                            <Menu
-                                sx={{ mt: '45px' }}
-                                id="menu-appbar"
-                                anchorEl={anchorElUser}
-                                anchorOrigin={{ vertical: 'top', horizontal: 'right' }}
-                                keepMounted
-                                transformOrigin={{ vertical: 'top', horizontal: 'right' }}
-                                open={Boolean(anchorElUser)}
-                                onClose={handleCloseUserMenu}
-                                PaperProps={{
-                                    sx: { width: 200, borderRadius: 3, boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1)' }
-                                }}
-                            >
-                                <Box sx={{ px: 2, py: 1.5 }}>
-                                    <Typography variant="subtitle2" fontWeight="700">User Profile</Typography>
-                                    <Typography variant="caption" color="text.secondary">Student Account</Typography>
-                                </Box>
-                                <Divider />
-                                <MenuItem onClick={() => { handleCloseUserMenu(); navigate('/profile'); }} sx={{ py: 1.5 }}>
-                                    <UserIcon size={18} style={{ marginRight: 12 }} /> Profile
-                                </MenuItem>
-                                <MenuItem onClick={() => { handleCloseUserMenu(); navigate('/settings'); }} sx={{ py: 1.5 }}>
-                                    <Settings01Icon size={18} style={{ marginRight: 12 }} /> Settings
-                                </MenuItem>
-                                <Divider />
-                                <MenuItem onClick={handleLogout} sx={{ py: 1.5, color: '#ef4444', fontWeight: 600 }}>
-                                    <Logout01Icon size={18} style={{ marginRight: 12 }} /> Log Out
-                                </MenuItem>
-                            </Menu>
-                        </Box>
                     </Box>
-                </Box>
+                )}
 
-                {/* Page Content Scrollable Area */}
-                <Box sx={{ flexGrow: 1, overflowY: 'auto', p: { xs: 2, md: 4 } }}>
+                {/* Content Area - Full height, no top bar padding */}
+                <Box sx={{ flexGrow: 1, overflowY: 'auto', p: { xs: 2, md: 4 }, pt: { xs: 8, md: 4 } }}>
+                    {/* Added top padding on mobile only to avoid overlap with floating button */}
                     <Outlet />
                 </Box>
             </Box>
