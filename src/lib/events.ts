@@ -1,12 +1,13 @@
-type Listener = () => void;
-const listeners: Set<Listener> = new Set();
+const EVENT_NAME = 'ai-counsellor:refresh';
 
 export const events = {
-    subscribe: (listener: Listener) => {
-        listeners.add(listener);
-        return () => listeners.delete(listener);
+    subscribe: (listener: () => void) => {
+        const handler = () => listener();
+        window.addEventListener(EVENT_NAME, handler);
+        return () => window.removeEventListener(EVENT_NAME, handler);
     },
     emit: () => {
-        listeners.forEach(l => l());
+        console.log(`[Event] Emitting ${EVENT_NAME}`);
+        window.dispatchEvent(new CustomEvent(EVENT_NAME));
     }
 };

@@ -120,16 +120,6 @@ export const useUniversities = () => {
         const fit_reason = uni.fit_reason || fit_reasons[Math.floor(pseudoRandom(uni.name + 'fit') * fit_reasons.length)];
         const risks = uni.risks || risk_factors[Math.floor(pseudoRandom(uni.name + 'risk') * risk_factors.length)];
 
-        return {
-            ...uni,
-            ranking,
-            acceptance_rate,
-            tuition_fee,
-            ai_classification,
-            fit_reason,
-            risks,
-            cost_range: tuition_fee > 45000 ? 'High' : tuition_fee > 25000 ? 'Medium' : 'Low'
-        };
         // --- TYPE & INTAKE ALIGNMENT ---
         let tags = uni.tags ? [...uni.tags] : [];
 
@@ -141,10 +131,37 @@ export const useUniversities = () => {
             ? 'Postgraduate'
             : 'Undergraduate';
 
-        // Add the tag if not present
+        // Add the tag if not present but ensure we don't duplicate logic
         if (!tags.includes('Undergraduate') && !tags.includes('Postgraduate')) {
             tags.push(degreeType);
         }
+
+        // --- NEW: Random Information Generation ---
+        const banners = [
+            "/1.webp",
+            "/2.webp",
+            "/3.webp",
+            "/4.webp",
+            "/5.webp",
+            "/6.webp"
+        ];
+
+        // Deterministic but random-looking banner based on name
+        const banner_url = banners[Math.floor(pseudoRandom(uni.name + "banner") * banners.length)];
+
+        const website_url = `https://www.${uni.name.replace(/[^a-zA-Z]/g, '').toLowerCase()}.edu`;
+
+        // Random Degrees available
+        const possibleDegrees = ['Undergraduate', 'Postgraduate', 'PhD'];
+        const degree_levels: string[] = [];
+        // Ensure at least one matches the profile's interest, then add random others
+        if (degreeType) degree_levels.push(degreeType);
+
+        possibleDegrees.forEach(d => {
+            if (d !== degreeType && pseudoRandom(uni.name + d) > 0.4) {
+                degree_levels.push(d);
+            }
+        });
 
         // Intake: Prefer Fall as requested, or randomize appropriately
         // We don't have a specific field for intake in University type yet, but we can simulate it in fit_reason or add it if needed. 
@@ -159,6 +176,9 @@ export const useUniversities = () => {
             fit_reason,
             risks,
             tags,
+            banner_url,
+            website_url,
+            degree_levels,
             cost_range: tuition_fee > 45000 ? 'High' : tuition_fee > 25000 ? 'Medium' : 'Low'
         };
     };

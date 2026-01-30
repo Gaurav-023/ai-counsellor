@@ -86,7 +86,7 @@ const DashboardPage = () => {
         fetchData();
         const unsubscribe = events.subscribe(() => {
             console.log("Dashboard refreshing due to AI Action...");
-            fetchData();
+            setTimeout(() => fetchData(), 500); // Wait for DB commit
         });
         return () => { unsubscribe(); };
     }, []);

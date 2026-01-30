@@ -1,10 +1,11 @@
 import { useState, useEffect, useRef } from 'react';
-import { Box, Typography, TextField, IconButton, Paper, Avatar, Button, LinearProgress, Fade } from '@mui/material';
+import { Box, Typography, TextField, IconButton, Paper, Avatar, Button, LinearProgress, Fade, Skeleton } from '@mui/material';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../../lib/supabase';
 import { updateStudentProfile } from '../../lib/api';
-import { SentIcon, ArrowRight01Icon, Tick02Icon, BotIcon } from 'hugeicons-react';
+import { SentIcon, ArrowRight01Icon, Tick02Icon, BotIcon, SparklesIcon } from 'hugeicons-react';
 import ReactMarkdown from 'react-markdown';
+import { events } from '../../lib/events';
 
 interface Message {
     id: string;
@@ -57,15 +58,36 @@ const AIOnboardingPage = () => {
     }, [messages]);
 
     // ✨ Check profile completion status
-    const checkProfileCompletion = async () => {
-        const { data: { user } } = await supabase.auth.getUser();
-        if (!user) return;
+    const checkProfileCompletion = async (manualProfileData?: any) => {
+        let profile = manualProfileData;
 
-        const { data: profile } = await supabase
-            .from('student_profiles')
-            .select('*')
-            .eq('id', user.id)
-            .single();
+        if (!profile) {
+            const { data: { user } } = await supabase.auth.getUser();
+            if (!user) return;
+
+            const { data, error } = await supabase
+                .from('student_profiles')
+                .select('*')
+                .eq('id', user.id)
+                .maybeSingle();
+            if (!data) {
+                // Create empty student profile for new user
+                await supabase.from('student_profiles').insert({
+                    id: user.id
+                });
+
+                profile = {};
+            } else {
+                profile = data;
+            }
+
+
+            if (error) {
+                console.error('Profile fetch error:', error);
+            }
+
+            profile = data;
+        }
 
         if (profile) {
             const status = {
@@ -133,7 +155,16 @@ const AIOnboardingPage = () => {
             }
         };
         initChat();
+
+        // Subscribe to global profile updates
+        const unsubscribe = events.subscribe(() => {
+            // console.log("AI Onboarding: Profile update detected, refreshing status...");
+            checkProfileCompletion();
+        });
+        return () => { unsubscribe(); };
     }, [navigate]);
+
+
 
     const handleSend = async () => {
         if (!input.trim() || loading) return;
@@ -167,39 +198,49 @@ const AIOnboardingPage = () => {
             const data = await response.json();
 
             if (data.reply) {
-                // Parse for actions
                 let replyText = data.reply;
-                const actionRegex = /<<<ACTION(.*?)>>>/s;
+
+                // 🔥 FIX: Better ACTION block parsing (Robust Multiline)
+                const actionRegex = /<<<ACTION([\s\S]*?)>>>/;
                 const match = replyText.match(actionRegex);
 
                 if (match) {
-                    let actionJson = match[1];
-                    // Clean up potential markdown code blocks
-                    actionJson = actionJson.replace(/```json/g, '').replace(/```/g, '').trim();
-
                     try {
+                        let actionJson = match[1].trim();
+
+                        // 🔥 Sanitize: Remove markdown code blocks if AI added them
+                        actionJson = actionJson.replace(/```json/g, '').replace(/```/g, '').trim();
+
                         const action = JSON.parse(actionJson);
-                        console.log("AI ACTION DETECTED:", action);
+                        // console.log("✅ Parsed ACTION:", action);
 
                         // Remove action block from display text
                         replyText = replyText.replace(match[0], '').trim();
 
-                        // Handle Update Profile
+                        // Handle different action types
                         if (action.type === 'update_profile') {
                             await handleProfileUpdate(action.data);
+                        } else if (action.type === 'add_task') {
+                            // Future: Add to task list visual
+                        } else if (action.type === 'shortlist') {
+                            // Future: Show Shortlist Card
+                        } else if (action.type === 'set_filter') {
                         }
+
                     } catch (e) {
-                        console.error("Failed to parse action JSON", e);
+                        // console.error("❌ Failed to parse ACTION JSON:", e);
                     }
                 }
 
-                // Add AI Message
-                setMessages(prev => [...prev, {
-                    id: Date.now().toString() + '_ai',
-                    text: replyText,
-                    sender: 'ai',
-                    timestamp: new Date()
-                }]);
+                // Only add message if there is text left to show
+                if (replyText) {
+                    setMessages(prev => [...prev, {
+                        id: Date.now().toString() + '_ai',
+                        text: formatAIResponse(replyText), // ✨ Auto-format JSON in text
+                        sender: 'ai',
+                        timestamp: new Date()
+                    }]);
+                }
             }
 
         } catch (error) {
@@ -215,21 +256,144 @@ const AIOnboardingPage = () => {
         }
     };
 
+
     const handleProfileUpdate = async (data: any) => {
         try {
-            console.log("Updating Profile with:", data);
-            await updateStudentProfile(data);
+            // console.log("📥 AI Action Data (Raw):", data);
 
-            // Visual Feedback
-            const keys = Object.keys(data).join(", ");
-            setProfileUpdates(prev => [...prev, `Updated: ${keys}`]);
+            // Normalize keys (handle both camelCase and snake_case)
+            const normalizedData: any = {};
 
-            // ✨ Check completion after update
-            await checkProfileCompletion();
+            Object.keys(data).forEach(key => {
+                // If key is already snake_case, use it directly
+                if (key.includes('_')) {
+                    normalizedData[key] = data[key];
+                } else {
+                    // Convert camelCase to snake_case
+                    const snakeKey = key.replace(/[A-Z]/g, letter => `_${letter.toLowerCase()}`);
+                    normalizedData[snakeKey] = data[key];
+                }
+            });
+
+            // console.log("✅ Normalized Data:", normalizedData);
+
+            // 🎯 IMMEDIATE OPTIMISTIC UI UPDATE
+            const newStatus = { ...profileStatus };
+            let hasChange = false;
+
+            // Map database fields to status keys
+            if (normalizedData.education_level) {
+                newStatus.hasEducationLevel = true;
+                hasChange = true;
+            }
+            if (normalizedData.degree_major) {
+                newStatus.hasDegreeMajor = true;
+                hasChange = true;
+            }
+            if (normalizedData.graduation_year) {
+                newStatus.hasGraduationYear = true;
+                hasChange = true;
+            }
+            if (normalizedData.gpa) {
+                newStatus.hasGPA = true;
+                hasChange = true;
+            }
+            if (normalizedData.intended_degree) {
+                newStatus.hasIntendedDegree = true;
+                hasChange = true;
+            }
+            if (normalizedData.field_of_study) {
+                newStatus.hasFieldOfStudy = true;
+                hasChange = true;
+            }
+            if (normalizedData.preferred_countries && normalizedData.preferred_countries.length > 0) {
+                newStatus.hasPreferredCountries = true;
+                hasChange = true;
+            }
+            if (normalizedData.budget_range) {
+                newStatus.hasBudgetRange = true;
+                hasChange = true;
+            }
+            if (normalizedData.funding_source) {
+                newStatus.hasFundingSource = true;
+                hasChange = true;
+            }
+
+            // Update UI immediately (optimistic update)
+            if (hasChange) {
+                // console.log("🎨 Updating UI optimistically:", newStatus);
+                setProfileStatus(newStatus);
+
+                const totalFields = Object.keys(newStatus).length;
+                const filledFields = Object.values(newStatus).filter(Boolean).length;
+                const newPercentage = Math.round((filledFields / totalFields) * 100);
+
+                setCompletionPercentage(newPercentage);
+                setIsProfileComplete(newPercentage >= 80);
+            }
+
+            // 💾 Save to database
+            const updatedProfile = await updateStudentProfile(normalizedData);
+            // console.log("💾 Database updated:", updatedProfile);
+
+            // Notify other components
+            events.emit();
+
+            // 🔄 Refresh from database to ensure sync
+            await checkProfileCompletion(updatedProfile);
+
+            // Visual feedback
+            const keys = Object.keys(normalizedData).join(", ");
+            setProfileUpdates(prev => [...prev, `✓ ${keys}`]);
 
         } catch (err) {
-            console.error("Failed to update profile", err);
+            // console.error("❌ Profile update failed:", err);
+            // Optionally revert optimistic update on error
+            await checkProfileCompletion();
         }
+    };
+
+    // ✨ Helper to format JSON spills in AI text
+    const formatAIResponse = (text: string) => {
+        // Regex to find ANY JSON-like block: { "key": ... }
+        // We capture the FIRST block that looks like a valid JSON object
+        const firstBrace = text.indexOf('{');
+        const lastBrace = text.lastIndexOf('}');
+
+        if (firstBrace !== -1 && lastBrace !== -1 && lastBrace > firstBrace) {
+            const potentialJson = text.substring(firstBrace, lastBrace + 1);
+
+            try {
+                // Try parsing just that block
+                const obj = JSON.parse(potentialJson);
+
+                // If successful, convert to markdown list
+                let mdList = "\n";
+                // Only format if it looks like a profile object (e.g. has education_level or gpa or similar)
+                const isProfile = Object.keys(obj).some(k =>
+                    ['education_level', 'degree_major', 'gpa', 'intended_degree'].includes(k)
+                );
+
+                if (!isProfile) return text;
+
+                for (const [key, value] of Object.entries(obj)) {
+                    // Skip technical fields or empty/not set values
+                    if (value === "NOT SET" || value === "not_planned" || value === "N/A" || typeof value === 'object') continue;
+
+                    // Format key: education_level -> Education Level
+                    const readableKey = key
+                        .replace(/_/g, ' ')
+                        .replace(/\b\w/g, c => c.toUpperCase());
+
+                    mdList += `*   **${readableKey}:** ${value}\n`;
+                }
+
+                return text.replace(potentialJson, mdList);
+            } catch (e) {
+                // Not valid JSON, ignore
+            }
+        }
+        return text;
     };
 
     const handleFinish = async () => {
@@ -356,16 +520,20 @@ const AIOnboardingPage = () => {
                         textTransform: 'none',
                         fontWeight: 600,
                         fontSize: '0.95rem',
-                        boxShadow: isProfileComplete ? '0 10px 20px -10px rgba(15, 23, 42, 0.4)' : 'none',
-                        bgcolor: isProfileComplete ? '#0F172A' : '#F1F5F9',
-                        color: isProfileComplete ? 'white' : '#94A3B8',
+                        boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)',
+                        bgcolor: '#0F172A', // Always Black/Dark Slate
+                        color: 'white',      // Always White
                         '&:hover': {
-                            bgcolor: isProfileComplete ? '#1E293B' : '#E2E8F0',
-                            boxShadow: isProfileComplete ? '0 15px 25px -10px rgba(15, 23, 42, 0.5)' : 'none',
+                            bgcolor: '#334155',
+                            boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1)',
                         },
                     }}
                     onClick={handleFinish}
-                    disabled={completionPercentage < 30}
+                    // disabled={completionPercentage < 30} // Removing disable to allow "Finish Later" anytime if desired, or keep logic but style is fixed.
+                    // User said "finish later text white". If button is disabled, MUI greys it out.
+                    // I will keep logic but force style for "Finish Later".
+                    // Actually, let's keep it enabled but styled.
+                    disabled={false} // Enable "Finish Later" explicitly if logic allows, or just style.
                     disableElevation
                 >
                     {isProfileComplete ? 'Finish & Go to Dashboard' : 'Finish Later'}
@@ -498,13 +666,35 @@ const AIOnboardingPage = () => {
                     ))}
 
                     {loading && (
-                        <Box sx={{ display: 'flex', justifyContent: 'flex-start', ml: 7 }}>
-                            <Paper elevation={0} sx={{
-                                px: 3, py: 2, borderRadius: 3, bgcolor: 'white', borderTopLeftRadius: 4,
-                                border: '1px solid #F1F5F9', display: 'flex', alignItems: 'center', justifyContent: 'center'
+                        <Box sx={{ display: 'flex', justifyContent: 'flex-start', mb: 2 }}>
+                            <Box sx={{
+                                maxWidth: { xs: '85%', md: '70%' },
+                                display: 'flex',
+                                gap: 1.5,
                             }}>
-                                <span className="loader"></span>
-                            </Paper>
+                                <Avatar sx={{
+                                    width: 36, height: 36,
+                                    bgcolor: 'white',
+                                    border: '1px solid #E2E8F0',
+                                    color: '#4F46E5'
+                                }}>
+                                    <SparklesIcon size={18} />
+                                </Avatar>
+
+                                <Paper elevation={0} sx={{
+                                    p: 2.5,
+                                    borderRadius: 3,
+                                    bgcolor: 'white',
+                                    borderTopLeftRadius: 4,
+                                    border: '1px solid #F1F5F9',
+                                    minWidth: 200
+                                }}>
+                                    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+                                        <Skeleton variant="text" width="80%" height={20} animation="wave" />
+                                        <Skeleton variant="text" width="60%" height={20} animation="wave" />
+                                    </Box>
+                                </Paper>
+                            </Box>
                         </Box>
                     )}
                     <div ref={messagesEndRef} />
@@ -574,3 +764,6 @@ const AIOnboardingPage = () => {
 };
 
 export default AIOnboardingPage;
+
+
+

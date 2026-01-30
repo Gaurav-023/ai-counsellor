@@ -11,6 +11,9 @@ export interface University {
     fit_reason?: string; // AI generated reason
     risks?: string; // AI generated risks
     logo_url?: string;
+    banner_url?: string;
+    website_url?: string;
+    degree_levels?: string[];
     tags: string[];
 }
 

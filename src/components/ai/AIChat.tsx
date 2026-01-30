@@ -23,7 +23,7 @@ import {
     Cancel01Icon,
     Delete02Icon,
     MoreVerticalCircle01Icon,
-    SparklesIcon,
+    BotIcon,
     UserIcon
 } from 'hugeicons-react';
 import ReactMarkdown from 'react-markdown';
@@ -60,6 +60,8 @@ export const AIChat = () => {
     const loadHistory = async () => {
         try {
             const history = await getChatHistory();
+            // Client-side sort to be absolutely sure of order
+            history.sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
             setMessages(history);
         } catch (error) {
             console.error("Failed to load chat history:", error);
@@ -263,11 +265,34 @@ export const AIChat = () => {
                 // [\s\S]*? means match any char including newlines (non-greedy)
                 const actionRegex = /<<<ACTION([\s\S]*?)>>>/g;
                 let match;
+                let foundAction = false;
+
                 while ((match = actionRegex.exec(aiMsg.content)) !== null) {
+                    foundAction = true;
                     const actionJson = match[1];
                     try {
                         await performAction(actionJson);
                     } catch (e) { console.error("JSON parse error from AI action", e); }
+                }
+
+                // FALLBACK: If AI outputted a JSON object in text but forgot the ACTION tag
+                if (!foundAction) {
+                    // Try to find a JSON object that looks like profile data
+                    const jsonRegex = /({[\s\n]*"[a-zA-Z0-9_]+":[\s\S]*?})/g; // Relaxed JSON regex
+                    let jsonMatch;
+                    while ((jsonMatch = jsonRegex.exec(aiMsg.content)) !== null) {
+                        try {
+                            const possibleData = JSON.parse(jsonMatch[1]);
+                            // Heuristic: Does it have typical profile keys?
+                            if (possibleData.gpa || possibleData.intended_degree || possibleData.education_level || possibleData.preferred_countries || possibleData.major || possibleData.budget) {
+                                console.log("Found implicit JSON action:", possibleData);
+                                await performAction(JSON.stringify({ type: 'update_profile', data: possibleData }));
+                                foundAction = true;
+                            }
+                        } catch (e) {
+                            // Not valid JSON, ignore
+                        }
+                    }
                 }
 
                 // Hide action tag from UI so it looks clean
@@ -275,9 +300,11 @@ export const AIChat = () => {
             }
 
             // Replace with real messages from DB
+            // Replace with real messages from DB
             setMessages(prev => {
                 const filtered = prev.filter(m => m.id !== 'temp-user');
-                return [...filtered, ...newMessages];
+                const combined = [...filtered, ...newMessages];
+                return combined.sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
             });
 
         } catch (error) {
@@ -373,7 +400,7 @@ export const AIChat = () => {
                                 justifyContent: 'center',
                                 color: '#fff'
                             }}>
-                                <SparklesIcon size={20} />
+                                <BotIcon size={20} />
                             </Box>
                             <Box>
                                 <Typography variant="subtitle1" fontWeight="700" sx={{ lineHeight: 1.2 }}>
@@ -428,7 +455,7 @@ export const AIChat = () => {
                                 height: '100%',
                                 opacity: 0.6
                             }}>
-                                <SparklesIcon size={48} color="#ddd" />
+                                <BotIcon size={48} color="#ddd" />
                                 <Typography variant="body2" color="text.secondary" sx={{ mt: 2, textAlign: 'center' }}>
                                     Hello! I'm your specific AI guide.<br />Ask me anything about universities.
                                 </Typography>
@@ -459,7 +486,7 @@ export const AIChat = () => {
                                             mb: 0.5,
                                             flexShrink: 0
                                         }}>
-                                            <SparklesIcon size={16} color="#666" />
+                                            <BotIcon size={16} color="#666" />
                                         </Box>
                                     )}
 

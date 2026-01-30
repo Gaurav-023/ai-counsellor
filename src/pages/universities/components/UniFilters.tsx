@@ -64,7 +64,7 @@ export const UniFilters = ({ filters, onChange }: UniFiltersProps) => {
 
             {/* Filters Grid */}
             <Grid container spacing={2}>
-                <Grid item xs={12} md={4}>
+                <Grid item xs={12} md={3}>
                     <Typography variant="caption" color="#64748b" fontWeight={600} sx={{ mb: 0.5, display: 'block' }}>
                         Search
                     </Typography>
@@ -84,7 +84,7 @@ export const UniFilters = ({ filters, onChange }: UniFiltersProps) => {
                     />
                 </Grid>
 
-                <Grid item xs={6} sm={6} md={2}>
+                <Grid item xs={6} sm={6} md={2.5}>
                     <Typography variant="caption" color="#64748b" fontWeight={600} sx={{ mb: 0.5, display: 'block' }}>
                         Country
                     </Typography>
@@ -100,7 +100,7 @@ export const UniFilters = ({ filters, onChange }: UniFiltersProps) => {
                     </FormControl>
                 </Grid>
 
-                <Grid item xs={6} sm={4} md={1.5}>
+                <Grid item xs={6} sm={4} md={2}>
                     <Typography variant="caption" color="#64748b" fontWeight={600} sx={{ mb: 0.5, display: 'block' }}>
                         Budget
                     </Typography>
@@ -116,7 +116,7 @@ export const UniFilters = ({ filters, onChange }: UniFiltersProps) => {
                     </FormControl>
                 </Grid>
 
-                <Grid item xs={6} sm={4} md={1.5}>
+                <Grid item xs={6} sm={4} md={2}>
                     <Typography variant="caption" color="#64748b" fontWeight={600} sx={{ mb: 0.5, display: 'block' }}>
                         Degree
                     </Typography>
@@ -132,7 +132,7 @@ export const UniFilters = ({ filters, onChange }: UniFiltersProps) => {
                     </FormControl>
                 </Grid>
 
-                <Grid item xs={6} sm={4} md={1.5}>
+                <Grid item xs={6} sm={4} md={2.5}>
                     <Typography variant="caption" color="#64748b" fontWeight={600} sx={{ mb: 0.5, display: 'block' }}>
                         Intake
                     </Typography>

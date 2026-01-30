@@ -14,6 +14,65 @@ interface Message {
     created_at: string;
 }
 
+const processMessageContent = (content: string) => {
+    // 1. Remove <<<ACTION...>>> blocks
+    let newContent = content.replace(/<<<ACTION[\s\S]*?>>>/g, '').trim();
+
+    // 2. Detect and Beautify Profile JSONs (e.g. from update_profile)
+    // Looks for JSON objects that might be profile updates
+    const jsonRegex = /({[\s\n]*"[a-zA-Z0-9_]+":[\s\S]*?})/g;
+
+    newContent = newContent.replace(jsonRegex, (match) => {
+        try {
+            const data = JSON.parse(match);
+            // Heuristic: If it has typical profile keys or is a flat object
+            if (Object.keys(data).length > 0 && !Array.isArray(data)) {
+                let md = "\n\n---\n**📋 Details:**\n\n";
+                let hasValidFields = false;
+
+                Object.entries(data).forEach(([key, val]) => {
+                    // specific skips
+                    if (key === 'action' || key === 'type') return;
+
+                    // Format Key
+                    const label = key
+                        .replace(/_/g, " ")
+                        .replace(/\b\w/g, c => c.toUpperCase())
+                        .replace("Gpa", "GPA")
+                        .replace("Ielts", "IELTS")
+                        .replace("Gre", "GRE");
+
+                    const valueStr = Array.isArray(val) ? val.join(", ") : String(val);
+                    if (valueStr && valueStr !== 'null' && valueStr !== 'undefined') {
+                        md += `* **${label}:** ${valueStr}\n`;
+                        hasValidFields = true;
+                    }
+                });
+
+                return hasValidFields ? md + "\n---\n" : match;
+            }
+            return match;
+        } catch (e) { return match; }
+    });
+
+    // 3. Fallback: Format other JSON-like content if it's not already in a code block
+    if (/^[\s\r\n]*(\{|\[)/.test(newContent) && /(\}|\])[\s\r\n]*$/.test(newContent) && !newContent.includes('```') && !newContent.includes('📋 Details')) {
+        try {
+            JSON.parse(newContent);
+            return '```json\n' + newContent + '\n```';
+        } catch (e) {
+            // Not valid JSON, ignore
+        }
+    }
+
+    // 4. Fallback for empty content (e.g. action only)
+    if (!newContent && content.includes('<<<ACTION')) {
+        return '*Processing action...*';
+    }
+
+    return newContent;
+};
+
 const AICounselorPage = () => {
     const [messages, setMessages] = useState<Message[]>([]);
     const [input, setInput] = useState('');
@@ -109,7 +168,11 @@ const AICounselorPage = () => {
         setLoading(true);
         try {
             const history = await getChatHistory();
-            setMessages(history);
+            const processedHistory = history.map(msg => ({
+                ...msg,
+                content: processMessageContent(msg.content)
+            })).filter(msg => msg.content.length > 0 || msg.role === 'user');
+            setMessages(processedHistory);
         } catch (error) {
             console.error("Failed to load chat history", error);
         } finally {
@@ -139,19 +202,123 @@ const AICounselorPage = () => {
             const actionRegex = /<<<ACTION(.*?)>>>/s;
             const match = displayText.match(actionRegex);
 
+            let actionData = null;
+
             if (match) {
                 const actionJson = match[1];
                 try {
-                    const action = JSON.parse(actionJson);
-                    console.log("COUNSELOR ACTION:", action);
+                    actionData = JSON.parse(actionJson);
+                    console.log("COUNSELOR ACTION (Explicit):", actionData);
                     displayText = displayText.replace(match[0], '').trim();
+                } catch (e) {
+                    console.error("Failed to parse explicit action", e);
+                }
+            } else {
+                // FALLBACK: Implicit JSON detection
+                const jsonRegex = /({[\s\n]*"[a-zA-Z0-9_]+":[\s\S]*?})/g; // Relaxed JSON regex
+                let jsonMatch;
+                while ((jsonMatch = jsonRegex.exec(displayText)) !== null) {
+                    try {
+                        const possibleData = JSON.parse(jsonMatch[1]);
+                        // Heuristic: Does it have typical profile keys?
+                        if (possibleData.gpa || possibleData.intended_degree || possibleData.education_level || possibleData.preferred_countries || possibleData.major || possibleData.budget) {
+                            console.log("COUNSELOR ACTION (Implicit):", possibleData);
+                            actionData = { type: 'update_profile', data: possibleData };
+                            break; // Assume one main implicit action per message
+                        }
+                    } catch (e) { }
+                }
+            }
+
+            if (actionData) {
+                const action = actionData; // Alias for existing code structure
+                try {
 
                     if (action.type === 'update_profile') {
-                        await updateStudentProfile(action.data);
-                        setFeedbackType('success');
-                        setActionFeedback("Profile updated successfully!");
-                        events.emit();
-                    } else if (action.type === 'shortlist') {
+                        // Ported normalization logic to ensure DB updates correctly
+                        const updates: any = {};
+                        const rawData = action.data;
+
+                        if (rawData.gpa) updates.gpa = rawData.gpa;
+
+                        // Smart Value-Based Normalization
+                        const cleanStr = (s: string) => s?.toLowerCase().trim() || '';
+
+                        // Check for Education Level keywords
+                        const isEduLevel = (val: string) => {
+                            const s = cleanStr(val);
+                            return s.includes('high school') || s.includes('undergrad') || s.includes('postgrad') || s === 'ug' || s === 'pg' || s.includes('grade 12') || s.includes('grade 11');
+                        };
+
+                        // Check for Intended Degree keywords (Target)
+                        const isTargetDegree = (val: string) => {
+                            const s = cleanStr(val);
+                            return s.includes('bachelor') || s.includes('master') || s.includes('mba') || s.includes('phd') || s.includes('doctorate') || s.includes('ms') || s.includes('ma ') || s.includes('msc');
+                        };
+
+                        // Process ambiguous keys
+                        let proposedEduLevel = rawData.education_level || rawData.education;
+                        let proposedTargetDegree = rawData.intended_degree || rawData.degree; // 'degree' is often ambiguous
+
+                        // Heuristic Fixes
+                        if (proposedTargetDegree && isEduLevel(proposedTargetDegree)) {
+                            // AI put "High School" in "degree" -> Move to education_level
+                            if (!proposedEduLevel) proposedEduLevel = proposedTargetDegree;
+                            proposedTargetDegree = null; // Clear from target
+                        }
+
+                        if (proposedEduLevel && isTargetDegree(proposedEduLevel)) {
+                            // AI put "Masters" in "education", move to intended_degree
+                            if (!proposedTargetDegree) proposedTargetDegree = proposedEduLevel;
+                        }
+
+                        if (proposedEduLevel) {
+                            // Normalize Dropdown Values
+                            const s = cleanStr(proposedEduLevel);
+                            if (s.includes('high school') || s.includes('school')) updates.education_level = 'High School';
+                            else if (s.includes('undergrad') || s === 'ug') updates.education_level = 'Undergraduate';
+                            else if (s.includes('postgrad') || s === 'pg') updates.education_level = 'Postgraduate';
+                            else updates.education_level = 'Other';
+                        }
+
+                        if (proposedTargetDegree) {
+                            // Normalize Dropdown Values
+                            const s = cleanStr(proposedTargetDegree);
+                            if (s.includes('bachelor') || s.includes('bs') || s.includes('ba ')) updates.intended_degree = "Bachelor's Degree";
+                            else if (s.includes('master') || s.includes('ms') || s.includes('ma ') || s.includes('msc')) updates.intended_degree = "Master's Degree";
+                            else if (s.includes('mba')) updates.intended_degree = "MBA";
+                            else if (s.includes('phd') || s.includes('doctor')) updates.intended_degree = "PhD / Doctorate";
+                            else if (s.includes('associate')) updates.intended_degree = "Associate Degree";
+                            else updates.intended_degree = proposedTargetDegree; // Fallback
+                        }
+
+                        // Other Fields
+                        if (rawData.gpa) updates.gpa = rawData.gpa;
+
+                        if (rawData.degree_major) updates.degree_major = rawData.degree_major;
+                        else if (rawData.major) updates.degree_major = rawData.major;
+
+                        if (rawData.budget_range) updates.budget_range = rawData.budget_range;
+                        else if (rawData.budget) updates.budget_range = rawData.budget;
+
+                        // Countries
+                        let countrySource = rawData.preferred_countries || rawData.countries;
+                        if (countrySource) {
+                            updates.preferred_countries = Array.isArray(countrySource) ? countrySource : [countrySource];
+                        }
+
+                        console.log("Normalized Updates (Page):", updates);
+
+                        if (Object.keys(updates).length > 0) {
+                            await updateStudentProfile(updates);
+                            setFeedbackType('success');
+                            setActionFeedback("Profile updated successfully!");
+                            events.emit();
+                        } else {
+                            console.warn("No valid fields found to update in:", rawData);
+                            setFeedbackType('error');
+                            setActionFeedback("I understood your profile, but couldn't update it.");
+                        }
                         if (action.data.university_id && action.data.university_id !== '[UUID_HERE]') {
                             await addToShortlist(action.data.university_id, action.data.category || 'Target');
                             setFeedbackType('success');
@@ -173,10 +340,15 @@ const AICounselorPage = () => {
 
             setMessages(prev => {
                 const filtered = prev.filter(m => m.id !== tempId);
+                const finalContent = processMessageContent(displayText || (match ? '<<<ACTION>>>' : '')); // Ensure action-only messages get handled
+
+                // If content is empty after processing (shouldn't happen with fallback), skip
+                if (!finalContent) return [...filtered, { ...userMsg, content: userMsg.content }];
+
                 return [
                     ...filtered,
                     { ...userMsg, content: userMsg.content },
-                    { ...aiMsg, content: displayText }
+                    { ...aiMsg, content: finalContent }
                 ];
             });
 
