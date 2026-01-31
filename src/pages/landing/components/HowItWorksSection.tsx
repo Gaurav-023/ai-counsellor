@@ -4,8 +4,6 @@ import {
     Button,
     Container,
     Typography,
-    alpha,
-    useTheme,
     Paper
 } from '@mui/material';
 import {
@@ -44,7 +42,6 @@ const lineVariants: Variants = {
 };
 
 const HowItWorksSection = () => {
-    const theme = useTheme();
 
     const steps = [
         {

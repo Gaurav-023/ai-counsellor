@@ -88,8 +88,7 @@ export const AIChat = () => {
                 const updates: any = {};
                 const rawData = action.data;
 
-                // Helper to set valid keys
-                const mapKey = (val: any, ...keys: string[]) => keys.forEach(k => updates[k] = val);
+
 
                 if (rawData.gpa) updates.gpa = rawData.gpa;
 

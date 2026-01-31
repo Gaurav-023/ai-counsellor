@@ -4,8 +4,6 @@ import {
     Grid,
     Paper,
     Typography,
-    alpha,
-    useTheme
 } from '@mui/material';
 import {
     GlobalEducationIcon,
@@ -24,7 +22,6 @@ const fadeInUp: Variants = {
 };
 
 const FeaturesSection = () => {
-    const theme = useTheme();
 
     const features = [
         { icon: GlobalEducationIcon, title: "Global Database", desc: "Access real-time data on 50,000+ universities across 30+ countries." },

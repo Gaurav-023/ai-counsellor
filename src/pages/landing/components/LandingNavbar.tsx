@@ -7,14 +7,12 @@ import {
     Container,
     Box,
     alpha,
-    useTheme
 } from '@mui/material';
 import { AiBrain03Icon } from 'hugeicons-react'; // SmartToy equivalent
 import { motion, useScroll, useMotionValueEvent } from 'framer-motion';
 import { useState } from 'react';
 
 const LandingNavbar = () => {
-    const theme = useTheme();
     const { scrollY } = useScroll();
     const [hidden, setHidden] = useState(false);
     const [scrolled, setScrolled] = useState(false);
