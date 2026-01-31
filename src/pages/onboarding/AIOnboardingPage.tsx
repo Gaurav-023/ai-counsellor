@@ -34,7 +34,7 @@ const AIOnboardingPage = () => {
     const messagesEndRef = useRef<HTMLDivElement>(null);
     const [, setProfileUpdates] = useState<string[]>([]);
 
-    // ✨ NEW: Completion tracking
+    // ✨ Completion tracking
     const [completionPercentage, setCompletionPercentage] = useState(0);
     const [isProfileComplete, setIsProfileComplete] = useState(false);
     const [profileStatus, setProfileStatus] = useState<ProfileCompletionStatus>({
@@ -70,23 +70,20 @@ const AIOnboardingPage = () => {
                 .select('*')
                 .eq('id', user.id)
                 .maybeSingle();
+
             if (!data) {
                 // Create empty student profile for new user
                 await supabase.from('student_profiles').insert({
                     id: user.id
                 });
-
                 profile = {};
             } else {
                 profile = data;
             }
 
-
             if (error) {
                 console.error('Profile fetch error:', error);
             }
-
-            profile = data;
         }
 
         if (profile) {
@@ -158,13 +155,51 @@ const AIOnboardingPage = () => {
 
         // Subscribe to global profile updates
         const unsubscribe = events.subscribe(() => {
-            // console.log("AI Onboarding: Profile update detected, refreshing status...");
             checkProfileCompletion();
         });
         return () => { unsubscribe(); };
     }, [navigate]);
 
+    // 🔥 IMPROVED: Robust ACTION block parser
+    const parseActionBlock = (text: string): { action: any | null, cleanText: string } => {
+        try {
+            // Match ACTION block with flexible whitespace handling
+            const actionRegex = /<<<\s*ACTION\s*([\s\S]*?)>>>/i;
+            const match = text.match(actionRegex);
 
+            if (!match) {
+                return { action: null, cleanText: text };
+            }
+
+            let actionJson = match[1].trim();
+
+            // Remove markdown code blocks if present
+            actionJson = actionJson.replace(/```json\s*/gi, '').replace(/```\s*/g, '').trim();
+
+            // Remove any leading/trailing whitespace and newlines
+            actionJson = actionJson.replace(/^\s+|\s+$/g, '');
+
+            // Parse JSON
+            const action = JSON.parse(actionJson);
+
+            // Validate action structure
+            if (!action.type || !action.data) {
+                console.warn('⚠️ Invalid ACTION structure:', action);
+                return { action: null, cleanText: text };
+            }
+
+            // Remove ACTION block from display text
+            const cleanText = text.replace(match[0], '').trim();
+
+            console.log('✅ Successfully parsed ACTION:', action);
+            return { action, cleanText };
+
+        } catch (error) {
+            console.error('❌ ACTION parsing failed:', error);
+            // Return original text if parsing fails
+            return { action: null, cleanText: text };
+        }
+    };
 
     const handleSend = async () => {
         if (!input.trim() || loading) return;
@@ -198,45 +233,30 @@ const AIOnboardingPage = () => {
             const data = await response.json();
 
             if (data.reply) {
-                let replyText = data.reply;
+                // 🔥 Parse ACTION block
+                const { action, cleanText } = parseActionBlock(data.reply);
 
-                // 🔥 FIX: Better ACTION block parsing (Robust Multiline)
-                const actionRegex = /<<<ACTION([\s\S]*?)>>>/;
-                const match = replyText.match(actionRegex);
-
-                if (match) {
-                    try {
-                        let actionJson = match[1].trim();
-
-                        // 🔥 Sanitize: Remove markdown code blocks if AI added them
-                        actionJson = actionJson.replace(/```json/g, '').replace(/```/g, '').trim();
-
-                        const action = JSON.parse(actionJson);
-                        // console.log("✅ Parsed ACTION:", action);
-
-                        // Remove action block from display text
-                        replyText = replyText.replace(match[0], '').trim();
-
-                        // Handle different action types
-                        if (action.type === 'update_profile') {
-                            await handleProfileUpdate(action.data);
-                        } else if (action.type === 'add_task') {
-                            // Future: Add to task list visual
-                        } else if (action.type === 'shortlist') {
-                            // Future: Show Shortlist Card
-                        } else if (action.type === 'set_filter') {
-                        }
-
-                    } catch (e) {
-                        // console.error("❌ Failed to parse ACTION JSON:", e);
+                // Handle action if present
+                if (action) {
+                    if (action.type === 'update_profile') {
+                        await handleProfileUpdate(action.data);
+                    } else if (action.type === 'add_task') {
+                        console.log('📝 Add task:', action.data);
+                        // Future: Add to task list
+                    } else if (action.type === 'shortlist') {
+                        console.log('⭐ Shortlist university:', action.data);
+                        // Future: Add to shortlist
+                    } else if (action.type === 'set_filter') {
+                        console.log('🔍 Set filter:', action.data);
+                        // Future: Apply filters
                     }
                 }
 
-                // Only add message if there is text left to show
-                if (replyText) {
+                // Only add message if there is text to show
+                if (cleanText) {
                     setMessages(prev => [...prev, {
                         id: Date.now().toString() + '_ai',
-                        text: formatAIResponse(replyText), // ✨ Auto-format JSON in text
+                        text: formatAIResponse(cleanText),
                         sender: 'ai',
                         timestamp: new Date()
                     }]);
@@ -256,72 +276,57 @@ const AIOnboardingPage = () => {
         }
     };
 
-
+    // 🔥 IMPROVED: Profile update with proper field mapping
     const handleProfileUpdate = async (data: any) => {
         try {
-            // console.log("📥 AI Action Data (Raw):", data);
+            console.log("📥 AI Action Data (Raw):", data);
 
-            // Normalize keys (handle both camelCase and snake_case)
+            // Normalize keys to snake_case
             const normalizedData: any = {};
 
             Object.keys(data).forEach(key => {
-                // If key is already snake_case, use it directly
-                if (key.includes('_')) {
-                    normalizedData[key] = data[key];
-                } else {
-                    // Convert camelCase to snake_case
-                    const snakeKey = key.replace(/[A-Z]/g, letter => `_${letter.toLowerCase()}`);
-                    normalizedData[snakeKey] = data[key];
-                }
+                // Convert camelCase to snake_case
+                const snakeKey = key.replace(/[A-Z]/g, letter => `_${letter.toLowerCase()}`);
+                normalizedData[snakeKey] = data[key];
             });
 
-            // console.log("✅ Normalized Data:", normalizedData);
+            console.log("✅ Normalized Data:", normalizedData);
 
-            // 🎯 IMMEDIATE OPTIMISTIC UI UPDATE
+            // 🎯 OPTIMISTIC UI UPDATE
             const newStatus = { ...profileStatus };
             let hasChange = false;
 
             // Map database fields to status keys
-            if (normalizedData.education_level) {
-                newStatus.hasEducationLevel = true;
-                hasChange = true;
-            }
-            if (normalizedData.degree_major) {
-                newStatus.hasDegreeMajor = true;
-                hasChange = true;
-            }
-            if (normalizedData.graduation_year) {
-                newStatus.hasGraduationYear = true;
-                hasChange = true;
-            }
-            if (normalizedData.gpa) {
-                newStatus.hasGPA = true;
-                hasChange = true;
-            }
-            if (normalizedData.intended_degree) {
-                newStatus.hasIntendedDegree = true;
-                hasChange = true;
-            }
-            if (normalizedData.field_of_study) {
-                newStatus.hasFieldOfStudy = true;
-                hasChange = true;
-            }
-            if (normalizedData.preferred_countries && normalizedData.preferred_countries.length > 0) {
-                newStatus.hasPreferredCountries = true;
-                hasChange = true;
-            }
-            if (normalizedData.budget_range) {
-                newStatus.hasBudgetRange = true;
-                hasChange = true;
-            }
-            if (normalizedData.funding_source) {
-                newStatus.hasFundingSource = true;
-                hasChange = true;
-            }
+            const fieldMapping: { [key: string]: keyof ProfileCompletionStatus } = {
+                'education_level': 'hasEducationLevel',
+                'degree_major': 'hasDegreeMajor',
+                'graduation_year': 'hasGraduationYear',
+                'gpa': 'hasGPA',
+                'intended_degree': 'hasIntendedDegree',
+                'field_of_study': 'hasFieldOfStudy',
+                'preferred_countries': 'hasPreferredCountries',
+                'budget_range': 'hasBudgetRange',
+                'funding_source': 'hasFundingSource',
+            };
+
+            // Update status based on provided fields
+            Object.keys(normalizedData).forEach(key => {
+                const statusKey = fieldMapping[key];
+                if (statusKey) {
+                    const value = normalizedData[key];
+                    // Check if value is meaningful
+                    if (key === 'preferred_countries') {
+                        newStatus[statusKey] = Array.isArray(value) && value.length > 0;
+                    } else {
+                        newStatus[statusKey] = !!value && value !== 'NOT SET';
+                    }
+                    hasChange = true;
+                }
+            });
 
             // Update UI immediately (optimistic update)
             if (hasChange) {
-                // console.log("🎨 Updating UI optimistically:", newStatus);
+                console.log("🎨 Updating UI optimistically:", newStatus);
                 setProfileStatus(newStatus);
 
                 const totalFields = Object.keys(newStatus).length;
@@ -334,7 +339,7 @@ const AIOnboardingPage = () => {
 
             // 💾 Save to database
             const updatedProfile = await updateStudentProfile(normalizedData);
-            // console.log("💾 Database updated:", updatedProfile);
+            console.log("💾 Database updated:", updatedProfile);
 
             // Notify other components
             events.emit();
@@ -343,20 +348,20 @@ const AIOnboardingPage = () => {
             await checkProfileCompletion(updatedProfile);
 
             // Visual feedback
-            const keys = Object.keys(normalizedData).join(", ");
+            const keys = Object.keys(normalizedData).map(k =>
+                k.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase())
+            ).join(", ");
             setProfileUpdates(prev => [...prev, `✓ ${keys}`]);
 
         } catch (err) {
-            // console.error("❌ Profile update failed:", err);
-            // Optionally revert optimistic update on error
+            console.error("❌ Profile update failed:", err);
+            // Revert optimistic update on error
             await checkProfileCompletion();
         }
     };
 
     // ✨ Helper to format JSON spills in AI text
     const formatAIResponse = (text: string) => {
-        // Regex to find ANY JSON-like block: { "key": ... }
-        // We capture the FIRST block that looks like a valid JSON object
         const firstBrace = text.indexOf('{');
         const lastBrace = text.lastIndexOf('}');
 
@@ -364,18 +369,16 @@ const AIOnboardingPage = () => {
             const potentialJson = text.substring(firstBrace, lastBrace + 1);
 
             try {
-                // Try parsing just that block
                 const obj = JSON.parse(potentialJson);
 
-                // If successful, convert to markdown list
-                let mdList = "\n";
-                // Only format if it looks like a profile object (e.g. has education_level or gpa or similar)
+                // Only format if it looks like a profile object
                 const isProfile = Object.keys(obj).some(k =>
                     ['education_level', 'degree_major', 'gpa', 'intended_degree'].includes(k)
                 );
 
                 if (!isProfile) return text;
 
+                let mdList = "\n";
                 for (const [key, value] of Object.entries(obj)) {
                     // Skip technical fields or empty/not set values
                     if (value === "NOT SET" || value === "not_planned" || value === "N/A" || typeof value === 'object') continue;
@@ -521,19 +524,14 @@ const AIOnboardingPage = () => {
                         fontWeight: 600,
                         fontSize: '0.95rem',
                         boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)',
-                        bgcolor: '#0F172A', // Always Black/Dark Slate
-                        color: 'white',      // Always White
+                        bgcolor: '#0F172A',
+                        color: 'white',
                         '&:hover': {
                             bgcolor: '#334155',
                             boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1)',
                         },
                     }}
                     onClick={handleFinish}
-                    // disabled={completionPercentage < 30} // Removing disable to allow "Finish Later" anytime if desired, or keep logic but style is fixed.
-                    // User said "finish later text white". If button is disabled, MUI greys it out.
-                    // I will keep logic but force style for "Finish Later".
-                    // Actually, let's keep it enabled but styled.
-                    disabled={false} // Enable "Finish Later" explicitly if logic allows, or just style.
                     disableElevation
                 >
                     {isProfileComplete ? 'Finish & Go to Dashboard' : 'Finish Later'}
@@ -706,7 +704,7 @@ const AIOnboardingPage = () => {
                     display: 'flex',
                     justifyContent: 'center',
                     bgcolor: 'transparent',
-                    pointerEvents: 'none' // Let clicks pass through transparent area
+                    pointerEvents: 'none'
                 }}>
                     <Paper
                         elevation={4}
@@ -764,6 +762,3 @@ const AIOnboardingPage = () => {
 };
 
 export default AIOnboardingPage;
-
-
-
