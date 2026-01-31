@@ -5,6 +5,7 @@ import AICounselorSection from './components/AICounselorSection';
 import FeaturesSection from './components/FeaturesSection';
 import HowItWorksSection from './components/HowItWorksSection';
 import LogoMarquee from './components/LogoMarquee';
+import ReviewsSection from './components/ReviewsSection';
 
 const LandingPage = () => {
     return (
@@ -14,7 +15,10 @@ const LandingPage = () => {
             <AICounselorSection />
             <FeaturesSection />
             <LogoMarquee />
+
+            <ReviewsSection />
             <HowItWorksSection />
+
         </Box>
     );
 };

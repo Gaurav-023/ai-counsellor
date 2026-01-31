@@ -7,8 +7,7 @@ import {
     TextField,
     Typography,
     InputAdornment,
-    Checkbox,
-    FormControlLabel,
+
     Stack,
     IconButton,
     Alert
@@ -166,38 +165,6 @@ const LoginPage = () => {
                     }}
                 />
 
-                <Stack direction="row" alignItems="center" justifyContent="space-between">
-                    <FormControlLabel
-                        control={
-                            <Checkbox
-                                defaultChecked
-                                sx={{
-                                    color: 'rgba(255, 255, 255, 0.6)',
-                                    '&.Mui-checked': {
-                                        color: 'white',
-                                    },
-                                }}
-                            />
-                        }
-                        label={
-                            <Typography variant="body2" sx={{ color: 'rgba(255, 255, 255, 0.8)' }}>
-                                Remember me
-                            </Typography>
-                        }
-                    />
-                    <Typography
-                        component="a"
-                        href="#"
-                        variant="body2"
-                        sx={{
-                            color: 'white',
-                            textDecoration: 'none',
-                            '&:hover': { textDecoration: 'underline' }
-                        }}
-                    >
-                        Forgot Password?
-                    </Typography>
-                </Stack>
 
                 <Button
                     fullWidth
